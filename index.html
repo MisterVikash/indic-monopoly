@@ -203,6 +203,7 @@ body{font-family:"DM Sans",Arial,sans-serif;background:linear-gradient(135deg,#1
   <div class="card">
     <button class="btn-p" id="btn-create" aria-label="Create a new game">&#127918; Create Game</button>
     <button class="btn-s" id="btn-join" aria-label="Join an existing game">&#128682; Join Game</button>
+    <button class="btn-s" id="btn-restore" aria-label="Restore your game" style="background:rgba(255,107,0,.12);border-color:rgba(255,107,0,.3);color:rgba(255,107,0,.9)">&#128274; Restore My Game</button>
     <p style="text-align:center;font-size:.7rem;color:rgba(255,255,255,.26);margin-top:4px">
       <span class="live-dot" aria-hidden="true"></span>Real-time multiplayer &bull; Screen reader friendly
     </p>
@@ -229,6 +230,7 @@ body{font-family:"DM Sans",Arial,sans-serif;background:linear-gradient(135deg,#1
     <h2 id="wr-name">Game Room</h2>
     <div style="color:rgba(255,255,255,.42);font-size:.83rem">Board: <strong id="wr-board" style="color:#FF6B00">-</strong></div>
     <div class="room-code" id="wr-code" aria-label="Room code">-</div>
+    <div id="wr-pass" style="color:rgba(255,107,0,.7);font-size:.82rem;margin-bottom:6px">Password: <strong id="wr-pass-val">-</strong></div>
     <div id="wr-players" class="players-row" role="list" aria-label="Players in room"></div>
     <div id="wr-status" class="wr-status">Waiting for players...</div>
     <button class="btn-start-g" id="btn-start-game" disabled style="display:none">Start Game &rarr;</button>
@@ -283,8 +285,8 @@ body{font-family:"DM Sans",Arial,sans-serif;background:linear-gradient(135deg,#1
     <h2 id="mc-h">&#127918; Create New Game</h2>
     <label for="inp-cname">Your Name</label>
     <input type="text" id="inp-cname" placeholder="Enter your name..." maxlength="20" autocomplete="given-name">
-    <label for="inp-gname">Room Name</label>
-    <input type="text" id="inp-gname" placeholder="e.g. Game of Kritika..." maxlength="30">
+    <label for="inp-gpass">Room Password (4-6 digits)</label>
+    <input type="text" id="inp-gpass" placeholder="e.g. 1234" maxlength="6" inputmode="numeric">
     <label for="inp-board">Select Board (State)</label>
     <select id="inp-board"></select>
     <div class="mrow">
@@ -301,6 +303,8 @@ body{font-family:"DM Sans",Arial,sans-serif;background:linear-gradient(135deg,#1
     <p id="join-info" style="color:rgba(255,255,255,.42);font-size:.83rem;margin-bottom:14px">Joining game...</p>
     <label for="inp-jname">Your Name</label>
     <input type="text" id="inp-jname" placeholder="Enter your name..." maxlength="20" autocomplete="given-name">
+    <label for="inp-jpass">Room Password (leave empty if you are joining)</label>
+    <input type="text" id="inp-jpass" placeholder="Host? Enter password to restore..." maxlength="6" inputmode="numeric">
     <div class="mrow">
       <button class="btn-s" id="btn-cancel-join">Cancel</button>
       <button class="btn-p" id="btn-do-join">Request to Join &rarr;</button>
@@ -308,6 +312,21 @@ body{font-family:"DM Sans",Arial,sans-serif;background:linear-gradient(135deg,#1
   </div>
 </div>
 
+
+<!-- MODAL: RESTORE -->
+<div id="modal-restore" class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="mr-h">
+  <div class="modal">
+    <h2 id="mr-h">&#128274; Restore Your Game</h2>
+    <p style="color:rgba(255,255,255,.42);font-size:.83rem;margin-bottom:14px">Enter your host password to restore your game session.</p>
+    <label for="inp-rpass">Host Password</label>
+    <input type="text" id="inp-rpass" placeholder="Enter your password..." maxlength="6" inputmode="numeric">
+    <div id="restore-list" style="max-height:200px;overflow-y:auto;margin-bottom:14px"></div>
+    <div class="mrow">
+      <button class="btn-s" id="btn-cancel-restore">Cancel</button>
+      <button class="btn-p" id="btn-do-restore">Restore Game &#8594;</button>
+    </div>
+  </div>
+</div>
 <!-- MODAL: PROPERTY -->
 <div id="modal-prop" class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="mp-h">
   <div class="prop-modal">
@@ -368,16 +387,16 @@ body{font-family:"DM Sans",Arial,sans-serif;background:linear-gradient(135deg,#1
 <script>
 
 // ============================================================
-// INDIC MONOPOLY - Complete Implementation
+// INDIC MONOPOLY - v2.0 Complete
+// Changes: Password system, restore on refresh, auto-terminate,
+//          real-time announcements, focus management, chat sounds
 // ============================================================
 
-// File check
 if(window.location.protocol==='file:'){
-  document.body.innerHTML='<div style="font-family:sans-serif;background:#1A0A00;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px"><div style="background:rgba(255,255,255,.08);border:2px solid #FF6B00;border-radius:16px;padding:36px;max-width:500px;text-align:center;color:#fff"><div style="font-size:3rem;margin-bottom:16px">&#9888;</div><h2 style="color:#F0C040;margin-bottom:12px">Please use local server!</h2><p style="color:rgba(255,255,255,.7);line-height:1.7">Double-click <strong>START-GAME.bat</strong><br>Then open <strong>http://localhost:8080</strong></p></div></div>';
+  document.body.innerHTML='<div style="font-family:sans-serif;background:#1A0A00;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px"><div style="background:rgba(255,255,255,.08);border:2px solid #FF6B00;border-radius:16px;padding:36px;max-width:500px;text-align:center;color:#fff"><div style="font-size:3rem;margin-bottom:16px">&#9888;</div><h2 style="color:#F0C040;margin-bottom:12px">Please use local server!</h2><p style="color:rgba(255,255,255,.7);line-height:1.7">Run <strong>START-GAME.bat</strong> or open via <strong>http://localhost:8080</strong></p></div></div>';
   throw new Error('file:// not supported');
 }
 
-// Firebase Config
 var FB={
   apiKey:'AIzaSyDx95S0-Ao8fMKhWM6nfoq-tv856rif3l4',
   authDomain:'indic-monopoly.firebaseapp.com',
@@ -388,7 +407,6 @@ var FB={
   appId:'1:479342520821:web:4efa6b2f7aa98c93e758bc'
 };
 
-// Sound
 var SND={
   folder:'./sounds/',
   map:{
@@ -397,7 +415,7 @@ var SND={
     losing:'losing.mp3',pay_r:['pay_r.mp3','pay_r1.mp3','pay_r2.mp3'],
     tax:'tax.mp3',railway:'railway.mp3',
     salary:['salary.mp3','salary2.mp3'],
-    win:'win.mp3',prop:'prop.mp3'
+    win:'win.mp3',prop:'prop.mp3',message:'message.mp3'
   },
   play:function(k){
     try{
@@ -410,7 +428,6 @@ var SND={
   }
 };
 
-// Colors
 var COLORS={
   red:'#C62828',blue:'#1565C0',green:'#2E7D32',pink:'#AD1457',
   yellow:'#F9A825',orange:'#E65100',brown:'#4E342E',
@@ -419,8 +436,8 @@ var COLORS={
 };
 var PCOLORS=['#FF6B00','#1565C0','#2E7D32','#AD1457','#6A1B9A','#E65100'];
 var START_MONEY=1500,SALARY=200,JAIL=10,GO_JAIL=28;
+var INACTIVE_TIMEOUT=2*60*1000; // 2 minutes
 
-// Boards
 var BOARDS=[
   {id:'rajasthan',name:'Rajasthan',capital:'Jaipur',
    events:[
@@ -431,14 +448,7 @@ var BOARDS=[
     {icon:'&#128176;',text:'You got a jackpot 500RS!',amount:500,gain:true},
     {icon:'&#128176;',text:'You got a jackpot 1000RS!',amount:1000,gain:true}
    ],
-   colors:{
-    red:['Jaipur','Jodhpur','Udaipur'],blue:['Bikaner','Ajmer','Alwar'],
-    green:['Kota','Sikar','Pali'],pink:['Bharatpur','Chittorgarh','Jaisalmer'],
-    yellow:['Barmer','Nagaur','Tonk'],orange:['Sawai Madhopur','Jhalawar','Hanumangarh'],
-    brown:['Churu','Dholpur','Karauli'],white:['Dungarpur','Baran','Jhunjhunu'],
-    purple:['Sri Ganganagar','Dausa','Bundi'],
-    stations:['Jaipur Airport','Jodhpur Station','Bikaner Station','Udaipur Airport']
-   }
+   colors:{red:['Jaipur','Jodhpur','Udaipur'],blue:['Bikaner','Ajmer','Alwar'],green:['Kota','Sikar','Pali'],pink:['Bharatpur','Chittorgarh','Jaisalmer'],yellow:['Barmer','Nagaur','Tonk'],orange:['Sawai Madhopur','Jhalawar','Hanumangarh'],brown:['Churu','Dholpur','Karauli'],white:['Dungarpur','Baran','Jhunjhunu'],purple:['Sri Ganganagar','Dausa','Bundi'],stations:['Jaipur Airport','Jodhpur Station','Bikaner Station','Udaipur Airport']}
   },
   {id:'gujarat',name:'Gujarat',capital:'Gandhinagar',
    events:[
@@ -449,14 +459,7 @@ var BOARDS=[
     {icon:'&#128296;',text:'Diamond business bonus from Surat! +1000RS',amount:1000,gain:true},
     {icon:'&#128176;',text:'Rann Utsav Bonus! You got 500RS.',amount:500,gain:true}
    ],
-   colors:{
-    red:['Ahmedabad','Surat','Vadodara'],blue:['Rajkot','Bhavnagar','Jamnagar'],
-    green:['Gandhinagar','Anand','Junagadh'],pink:['Morbi','Mehsana','Kutch'],
-    yellow:['Navsari','Valsad','Surendranagar'],orange:['Amreli','Patan','Botad'],
-    brown:['Dahod','Narmada','Tapi'],white:['Kheda','Banaskantha','Panchmahals'],
-    purple:['Aravalli','Chhota Udaipur','Devbhumi Dwarka'],
-    stations:['Ahmedabad Airport','Surat Station','Rajkot Airport','Vadodara Station']
-   }
+   colors:{red:['Ahmedabad','Surat','Vadodara'],blue:['Rajkot','Bhavnagar','Jamnagar'],green:['Gandhinagar','Anand','Junagadh'],pink:['Morbi','Mehsana','Kutch'],yellow:['Navsari','Valsad','Surendranagar'],orange:['Amreli','Patan','Botad'],brown:['Dahod','Narmada','Tapi'],white:['Kheda','Banaskantha','Panchmahals'],purple:['Aravalli','Chhota Udaipur','Devbhumi Dwarka'],stations:['Ahmedabad Airport','Surat Station','Rajkot Airport','Vadodara Station']}
   },
   {id:'maharashtra',name:'Maharashtra',capital:'Mumbai',
    events:[
@@ -467,14 +470,7 @@ var BOARDS=[
     {icon:'&#127916;',text:'Bollywood jackpot! You get 1000RS.',amount:1000,gain:true},
     {icon:'&#128176;',text:'Nashik Grape Festival bonus! You get 500RS.',amount:500,gain:true}
    ],
-   colors:{
-    red:['Mumbai','Pune','Nagpur'],blue:['Nashik','Aurangabad','Solapur'],
-    green:['Thane','Kolhapur','Nanded'],pink:['Sangli','Satara','Ratnagiri'],
-    yellow:['Akola','Latur','Amravati'],orange:['Jalgaon','Dhule','Ahmednagar'],
-    brown:['Osmanabad','Parbhani','Buldhana'],white:['Beed','Washim','Yavatmal'],
-    purple:['Nandurbar','Chandrapur','Gondia'],
-    stations:['Mumbai Airport','Pune Airport','Nagpur Airport','Nashik Station']
-   }
+   colors:{red:['Mumbai','Pune','Nagpur'],blue:['Nashik','Aurangabad','Solapur'],green:['Thane','Kolhapur','Nanded'],pink:['Sangli','Satara','Ratnagiri'],yellow:['Akola','Latur','Amravati'],orange:['Jalgaon','Dhule','Ahmednagar'],brown:['Osmanabad','Parbhani','Buldhana'],white:['Beed','Washim','Yavatmal'],purple:['Nandurbar','Chandrapur','Gondia'],stations:['Mumbai Airport','Pune Airport','Nagpur Airport','Nashik Station']}
   },
   {id:'kerala',name:'Kerala',capital:'Thiruvananthapuram',
    events:[
@@ -485,14 +481,7 @@ var BOARDS=[
     {icon:'&#129371;',text:'Spice trade jackpot from Idukki! You get 1000RS.',amount:1000,gain:true},
     {icon:'&#127754;',text:'Houseboat tourism bonus! You get 500RS.',amount:500,gain:true}
    ],
-   colors:{
-    red:['Thiruvananthapuram','Kochi','Kozhikode'],blue:['Thrissur','Kollam','Kannur'],
-    green:['Alappuzha','Palakkad','Malappuram'],pink:['Kottayam','Idukki','Wayanad'],
-    yellow:['Pathanamthitta','Kasaragod','Ernakulam'],orange:['Varkala','Munnar','Thekkady'],
-    brown:['Guruvayur','Periyar','Bekal'],white:['Lakshadweep','Ponnani','Chavakkad'],
-    purple:['Ottapalam','Shoranur','Thalassery'],
-    stations:['Kochi Airport','TVM Airport','Calicut Airport','Thrissur Station']
-   }
+   colors:{red:['Thiruvananthapuram','Kochi','Kozhikode'],blue:['Thrissur','Kollam','Kannur'],green:['Alappuzha','Palakkad','Malappuram'],pink:['Kottayam','Idukki','Wayanad'],yellow:['Pathanamthitta','Kasaragod','Ernakulam'],orange:['Varkala','Munnar','Thekkady'],brown:['Guruvayur','Periyar','Bekal'],white:['Lakshadweep','Ponnani','Chavakkad'],purple:['Ottapalam','Shoranur','Thalassery'],stations:['Kochi Airport','TVM Airport','Calicut Airport','Thrissur Station']}
   },
   {id:'punjab',name:'Punjab',capital:'Chandigarh',
    events:[
@@ -503,14 +492,7 @@ var BOARDS=[
     {icon:'&#128176;',text:'NRI relative sent money jackpot! You get 1000RS.',amount:1000,gain:true},
     {icon:'&#127801;',text:'Rose Garden festival bonus! You get 500RS.',amount:500,gain:true}
    ],
-   colors:{
-    red:['Amritsar','Ludhiana','Chandigarh'],blue:['Jalandhar','Patiala','Bathinda'],
-    green:['Mohali','Hoshiarpur','Gurdaspur'],pink:['Firozpur','Moga','Sangrur'],
-    yellow:['Fazilka','Faridkot','Mansa'],orange:['Muktsar','Nawanshahr','Rupnagar'],
-    brown:['Kapurthala','Fatehgarh Sahib','Tarn Taran'],white:['Barnala','Pathankot','Malerkotla'],
-    purple:['SAS Nagar','Ferozepur','Ajitgarh'],
-    stations:['Amritsar Airport','Chandigarh Airport','Ludhiana Station','Jalandhar Station']
-   }
+   colors:{red:['Amritsar','Ludhiana','Chandigarh'],blue:['Jalandhar','Patiala','Bathinda'],green:['Mohali','Hoshiarpur','Gurdaspur'],pink:['Firozpur','Moga','Sangrur'],yellow:['Fazilka','Faridkot','Mansa'],orange:['Muktsar','Nawanshahr','Rupnagar'],brown:['Kapurthala','Fatehgarh Sahib','Tarn Taran'],white:['Barnala','Pathankot','Malerkotla'],purple:['SAS Nagar','Ferozepur','Ajitgarh'],stations:['Amritsar Airport','Chandigarh Airport','Ludhiana Station','Jalandhar Station']}
   },
   {id:'madhya_pradesh',name:'Madhya Pradesh',capital:'Bhopal',
    events:[
@@ -521,14 +503,7 @@ var BOARDS=[
     {icon:'&#128176;',text:'Diamond mining jackpot from Panna! You get 1000RS.',amount:1000,gain:true},
     {icon:'&#127802;',text:'Khajuraho Festival of Dances bonus! You get 500RS.',amount:500,gain:true}
    ],
-   colors:{
-    red:['Bhopal','Indore','Jabalpur'],blue:['Gwalior','Ujjain','Sagar'],
-    green:['Dewas','Satna','Ratlam'],pink:['Rewa','Murwara','Singrauli'],
-    yellow:['Burhanpur','Khandwa','Chhindwara'],orange:['Pithampur','Sehore','Vidisha'],
-    brown:['Mandla','Balaghat','Dindori'],white:['Shivpuri','Morena','Guna'],
-    purple:['Tikamgarh','Chhatarpur','Panna'],
-    stations:['Bhopal Airport','Indore Airport','Jabalpur Station','Gwalior Station']
-   }
+   colors:{red:['Bhopal','Indore','Jabalpur'],blue:['Gwalior','Ujjain','Sagar'],green:['Dewas','Satna','Ratlam'],pink:['Rewa','Murwara','Singrauli'],yellow:['Burhanpur','Khandwa','Chhindwara'],orange:['Pithampur','Sehore','Vidisha'],brown:['Mandla','Balaghat','Dindori'],white:['Shivpuri','Morena','Guna'],purple:['Tikamgarh','Chhatarpur','Panna'],stations:['Bhopal Airport','Indore Airport','Jabalpur Station','Gwalior Station']}
   },
   {id:'west_bengal',name:'West Bengal',capital:'Kolkata',
    events:[
@@ -539,14 +514,7 @@ var BOARDS=[
     {icon:'&#128218;',text:'Kolkata Book Fair prize money! You get 1000RS.',amount:1000,gain:true},
     {icon:'&#127800;',text:'Poila Baishakh New Year bonus! You get 500RS.',amount:500,gain:true}
    ],
-   colors:{
-    red:['Kolkata','Howrah','Siliguri'],blue:['Asansol','Durgapur','Bardhaman'],
-    green:['Malda','Baharampur','Kharagpur'],pink:['Haldia','Bankura','Purulia'],
-    yellow:['Cooch Behar','Jalpaiguri','Darjeeling'],orange:['Alipurduar','Kalimpong','Raiganj'],
-    brown:['Krishnanagar','Nabadwip','Santiniketan'],white:['Barasat','Barrackpore','Kalyani'],
-    purple:['Shantipur','Balurghat','Ranaghat'],
-    stations:['Kolkata Airport','Bagdogra Airport','Howrah Station','Sealdah Station']
-   }
+   colors:{red:['Kolkata','Howrah','Siliguri'],blue:['Asansol','Durgapur','Bardhaman'],green:['Malda','Baharampur','Kharagpur'],pink:['Haldia','Bankura','Purulia'],yellow:['Cooch Behar','Jalpaiguri','Darjeeling'],orange:['Alipurduar','Kalimpong','Raiganj'],brown:['Krishnanagar','Nabadwip','Santiniketan'],white:['Barasat','Barrackpore','Kalyani'],purple:['Shantipur','Balurghat','Ranaghat'],stations:['Kolkata Airport','Bagdogra Airport','Howrah Station','Sealdah Station']}
   },
   {id:'tamil_nadu',name:'Tamil Nadu',capital:'Chennai',
    events:[
@@ -557,20 +525,14 @@ var BOARDS=[
     {icon:'&#127916;',text:'Kollywood film royalty jackpot! You get 1000RS.',amount:1000,gain:true},
     {icon:'&#127930;',text:'Chithirai Festival float prize! You get 500RS.',amount:500,gain:true}
    ],
-   colors:{
-    red:['Chennai','Coimbatore','Madurai'],blue:['Tiruchirappalli','Salem','Erode'],
-    green:['Tirunelveli','Vellore','Thoothukudi'],pink:['Tiruppur','Dindigul','Thanjavur'],
-    yellow:['Ranipet','Sivakasi','Karur'],orange:['Udhagamandalam','Hosur','Nagercoil'],
-    brown:['Kumbakonam','Kancheepuram','Chidambaram'],white:['Rameswaram','Mahabalipuram','Kanyakumari'],
-    purple:['Pollachi','Mettur','Cuddalore'],
-    stations:['Chennai Airport','Coimbatore Airport','Madurai Airport','Tiruchirappalli Airport']
-   }
+   colors:{red:['Chennai','Coimbatore','Madurai'],blue:['Tiruchirappalli','Salem','Erode'],green:['Tirunelveli','Vellore','Thoothukudi'],pink:['Tiruppur','Dindigul','Thanjavur'],yellow:['Ranipet','Sivakasi','Karur'],orange:['Udhagamandalam','Hosur','Nagercoil'],brown:['Kumbakonam','Kancheepuram','Chidambaram'],white:['Rameswaram','Mahabalipuram','Kanyakumari'],purple:['Pollachi','Mettur','Cuddalore'],stations:['Chennai Airport','Coimbatore Airport','Madurai Airport','Tiruchirappalli Airport']}
   }
 ];
 
 // Global state
 var db=null,myId=null,myName='',myGid=null,isHost=false,gs=null;
 var bd=null,cells=[],jTimers={},wrL=[],gL=null,myTurn=false,joiningG=null,selSell=null;
+var inactiveTimer=null;
 
 // Firebase helpers
 function R(p){return db.ref(p);}
@@ -584,17 +546,25 @@ function fOff(p){try{R(p).off();}catch(e){}}
 // Utils
 function uid(){return Math.random().toString(36).substr(2,9)+Date.now().toString(36);}
 function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
-function esc(s){var r={"&":"&amp;","<":"&lt;",">":"&gt;"};r['"']="&quot;";r["'"]="&#39;";return String(s||"").replace(/[&<>"']/g,function(c){return r[c];});}
+var m_esc={'&':'&amp;','<':'&lt;','>':'&gt;'};m_esc['"']='&quot;';m_esc["'"]='&#39;';
+function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return m_esc[c];});}
 function G(id){return document.getElementById(id);}
-
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');s.style.display='none';});
-  var el=G(id);
-  if(el){el.style.display='flex';el.classList.add('active');}
+  var el=G(id);if(el){el.style.display='flex';el.classList.add('active');}
 }
 function openM(id){G(id).classList.add('open');}
 function closeM(id){G(id).classList.remove('open');}
 function load(on){if(on){G('loader').classList.add('on');}else{G('loader').classList.remove('on');}}
+function focusEl(id){setTimeout(function(){var el=G(id);if(el)el.focus();},80);}
+
+function announce(msg){
+  var el=document.createElement('div');
+  el.setAttribute('role','status');el.setAttribute('aria-live','polite');
+  el.className='sr-only';el.textContent=msg;
+  document.body.appendChild(el);
+  setTimeout(function(){el.remove();},3000);
+}
 
 function toast(title,body,btns,ms){
   if(ms===undefined)ms=5000;
@@ -617,69 +587,61 @@ function toast(title,body,btns,ms){
   return n;
 }
 
-// Board cells
+// ── CELLS ─────────────────────────────────────────────────────
 function makeCells(board){
   var b=board.colors;
   return [
-    {id:0, name:'START Go!',    type:'salary',  icon:'&#127937;', price:0,   rent:0},
-    {id:1, name:b.red[0],       type:'property', color:'red',    price:400, rent:40},
-    {id:2, name:b.red[1],       type:'property', color:'red',    price:420, rent:42},
+    {id:0, name:'START Go!',     type:'salary',  icon:'&#127937;',price:0,  rent:0},
+    {id:1, name:b.red[0],        type:'property',color:'red',     price:400,rent:40},
+    {id:2, name:b.red[1],        type:'property',color:'red',     price:420,rent:42},
     {id:3, name:'Community Chest',type:'random', icon:'&#127922;',price:0,  rent:0},
-    {id:4, name:b.red[2],       type:'property', color:'red',    price:440, rent:44},
-    {id:5, name:b.stations[0],  type:'station',  icon:'&#9992;',  price:300, rent:50},
-    {id:6, name:b.blue[0],      type:'property', color:'blue',   price:300, rent:30},
-    {id:7, name:b.blue[1],      type:'property', color:'blue',   price:320, rent:32},
-    {id:8, name:'Income Tax',   type:'tax',      icon:'&#128184;',price:0,  rent:100},
-    {id:9, name:b.blue[2],      type:'property', color:'blue',   price:340, rent:34},
-    {id:10,name:'JAIL Visit',   type:'corner',   icon:'&#128274;',price:0,  rent:0},
-    {id:11,name:b.green[0],     type:'property', color:'green',  price:380, rent:38},
+    {id:4, name:b.red[2],        type:'property',color:'red',     price:440,rent:44},
+    {id:5, name:b.stations[0],   type:'station', icon:'&#9992;',  price:300,rent:50},
+    {id:6, name:b.blue[0],       type:'property',color:'blue',    price:300,rent:30},
+    {id:7, name:b.blue[1],       type:'property',color:'blue',    price:320,rent:32},
+    {id:8, name:'Income Tax',    type:'tax',     icon:'&#128184;',price:0,  rent:100},
+    {id:9, name:b.blue[2],       type:'property',color:'blue',    price:340,rent:34},
+    {id:10,name:'JAIL Visit',    type:'corner',  icon:'&#128274;',price:0,  rent:0},
+    {id:11,name:b.green[0],      type:'property',color:'green',   price:380,rent:38},
     {id:12,name:'Public Works 1',type:'public',  icon:'&#127963;',price:250,rent:30},
-    {id:13,name:b.green[1],     type:'property', color:'green',  price:360, rent:36},
-    {id:14,name:b.green[2],     type:'property', color:'green',  price:370, rent:37},
-    {id:15,name:b.stations[1],  type:'station',  icon:'&#128641;',price:300,rent:50},
-    {id:16,name:b.pink[0],      type:'property', color:'pink',   price:350, rent:35},
-    {id:17,name:'Chance',       type:'random',   icon:'&#10067;', price:0,  rent:0},
-    {id:18,name:b.pink[1],      type:'property', color:'pink',   price:340, rent:34},
-    {id:19,name:b.pink[2],      type:'property', color:'pink',   price:360, rent:36},
-    {id:20,name:'FREE Parking', type:'corner',   icon:'&#127359;',price:0,  rent:0},
-    {id:21,name:b.yellow[0],    type:'property', color:'yellow', price:320, rent:32},
-    {id:22,name:b.yellow[1],    type:'property', color:'yellow', price:330, rent:33},
+    {id:13,name:b.green[1],      type:'property',color:'green',   price:360,rent:36},
+    {id:14,name:b.green[2],      type:'property',color:'green',   price:370,rent:37},
+    {id:15,name:b.stations[1],   type:'station', icon:'&#128641;',price:300,rent:50},
+    {id:16,name:b.pink[0],       type:'property',color:'pink',    price:350,rent:35},
+    {id:17,name:'Chance',        type:'random',  icon:'&#10067;', price:0,  rent:0},
+    {id:18,name:b.pink[1],       type:'property',color:'pink',    price:340,rent:34},
+    {id:19,name:b.pink[2],       type:'property',color:'pink',    price:360,rent:36},
+    {id:20,name:'FREE Parking',  type:'corner',  icon:'&#127359;',price:0,  rent:0},
+    {id:21,name:b.yellow[0],     type:'property',color:'yellow',  price:320,rent:32},
+    {id:22,name:b.yellow[1],     type:'property',color:'yellow',  price:330,rent:33},
     {id:23,name:'Community Chest',type:'random', icon:'&#127922;',price:0,  rent:0},
-    {id:24,name:b.yellow[2],    type:'property', color:'yellow', price:340, rent:34},
-    {id:25,name:b.stations[2],  type:'station',  icon:'&#128641;',price:300,rent:50},
-    {id:26,name:b.orange[0],    type:'property', color:'orange', price:280, rent:28},
-    {id:27,name:b.orange[1],    type:'property', color:'orange', price:290, rent:29},
-    {id:28,name:'GO TO JAIL',   type:'corner',   icon:'&#128110;',price:0,  rent:0},
-    {id:29,name:b.orange[2],    type:'property', color:'orange', price:300, rent:30},
-    {id:30,name:b.brown[0],     type:'property', color:'brown',  price:260, rent:26},
+    {id:24,name:b.yellow[2],     type:'property',color:'yellow',  price:340,rent:34},
+    {id:25,name:b.stations[2],   type:'station', icon:'&#128641;',price:300,rent:50},
+    {id:26,name:b.orange[0],     type:'property',color:'orange',  price:280,rent:28},
+    {id:27,name:b.orange[1],     type:'property',color:'orange',  price:290,rent:29},
+    {id:28,name:'GO TO JAIL',    type:'corner',  icon:'&#128110;',price:0,  rent:0},
+    {id:29,name:b.orange[2],     type:'property',color:'orange',  price:300,rent:30},
+    {id:30,name:b.brown[0],      type:'property',color:'brown',   price:260,rent:26},
     {id:31,name:'Public Works 2',type:'public',  icon:'&#127959;',price:250,rent:30},
-    {id:32,name:b.brown[1],     type:'property', color:'brown',  price:270, rent:27},
-    {id:33,name:b.brown[2],     type:'property', color:'brown',  price:280, rent:28},
-    {id:34,name:b.stations[3],  type:'station',  icon:'&#9992;',  price:300, rent:50},
-    {id:35,name:b.white[0],     type:'property', color:'white',  price:240, rent:24},
-    {id:36,name:'Chance',       type:'random',   icon:'&#10067;', price:0,  rent:0},
-    {id:37,name:b.purple[0],    type:'property', color:'purple', price:350, rent:35},
+    {id:32,name:b.brown[1],      type:'property',color:'brown',   price:270,rent:27},
+    {id:33,name:b.brown[2],      type:'property',color:'brown',   price:280,rent:28},
+    {id:34,name:b.stations[3],   type:'station', icon:'&#9992;',  price:300,rent:50},
+    {id:35,name:b.white[0],      type:'property',color:'white',   price:240,rent:24},
+    {id:36,name:'Chance',        type:'random',  icon:'&#10067;', price:0,  rent:0},
+    {id:37,name:b.purple[0],     type:'property',color:'purple',  price:350,rent:35},
     {id:38,name:'Public Works 3',type:'public',  icon:'&#127795;',price:200,rent:25},
-    {id:39,name:'SALARY +200',  type:'salary',   icon:'&#128176;',price:0,  rent:0},
-    {id:40,name:'Luxury Tax',   type:'tax',      icon:'&#128142;',price:0,  rent:150}
+    {id:39,name:'SALARY +200',   type:'salary',  icon:'&#128176;',price:0,  rent:0},
+    {id:40,name:'Luxury Tax',    type:'tax',     icon:'&#128142;',price:0,  rent:150}
   ];
 }
 
-// Board cell grid positions (10x10 CSS grid)
 function cellPos(){
-  var p={};
-  var i;
-  // Bottom row left to right: cells 0-9 col 1-9, row 10
+  var p={};var i;
   for(i=0;i<=9;i++){p[i]={col:String(i+1),row:'10'};}
-  // Bottom-right corner: cell 10
   p[10]={col:'10',row:'10'};
-  // Right col bottom to top: cells 11-19
   for(i=11;i<=19;i++){p[i]={col:'10',row:String(10-(i-10))};}
-  // Top row right to left: cells 20-28
   for(i=20;i<=28;i++){p[i]={col:String(10-(i-19)),row:'1'};}
-  // Left col top to bottom: cells 29-36
   for(i=29;i<=36;i++){p[i]={col:'1',row:String(i-27)};}
-  // Extra cells
   p[37]={col:'6',row:'10'};p[38]={col:'7',row:'10'};
   p[39]={col:'8',row:'10'};p[40]={col:'9',row:'10'};
   return p;
@@ -694,27 +656,31 @@ function populateBoards(){
   });
 }
 
-// HOME
+// ── HOME ──────────────────────────────────────────────────────
 G('btn-create').addEventListener('click',function(){
   populateBoards();
-  G('inp-cname').value='';G('inp-gname').value='';
-  openM('modal-create');
-  setTimeout(function(){G('inp-cname').focus();},60);
+  G('inp-cname').value='';G('inp-gpass').value='';
+  openM('modal-create');focusEl('inp-cname');
 });
 G('btn-join').addEventListener('click',function(){
   showScreen('screen-lobby');loadLobby();
 });
+G('btn-restore').addEventListener('click',function(){
+  G('inp-rpass').value='';G('restore-list').innerHTML='';
+  openM('modal-restore');focusEl('inp-rpass');
+});
 G('btn-back-lobby').addEventListener('click',function(){showScreen('screen-home');});
 G('btn-cancel-create').addEventListener('click',function(){closeM('modal-create');});
 G('btn-cancel-join').addEventListener('click',function(){closeM('modal-join');});
+G('btn-cancel-restore').addEventListener('click',function(){closeM('modal-restore');});
 
-// CREATE GAME
+// ── CREATE GAME ───────────────────────────────────────────────
 G('btn-do-create').addEventListener('click',async function(){
   var name=G('inp-cname').value.trim();
-  var gname=G('inp-gname').value.trim();
+  var pass=G('inp-gpass').value.trim();
   var boardId=G('inp-board').value;
-  if(!name){toast('Warning','Please enter your name.');G('inp-cname').focus();return;}
-  if(!gname){toast('Warning','Please enter a room name.');G('inp-gname').focus();return;}
+  if(!name){toast('Warning','Please enter your name.');focusEl('inp-cname');return;}
+  if(!pass||pass.length<4){toast('Warning','Please enter a 4-6 digit password.');focusEl('inp-gpass');return;}
   load(true);
   var board=BOARDS.find(function(b){return b.id===boardId;})||BOARDS[0];
   myId=uid();myName=name;isHost=true;
@@ -722,29 +688,95 @@ G('btn-do-create').addEventListener('click',async function(){
   bd=board;cells=makeCells(board);
   var me={id:myId,name:name,color:PCOLORS[0],money:START_MONEY,position:0,properties:[],turns:0,bankrupt:false};
   var gdata={
-    id:gid,name:gname,boardId:boardId,boardName:board.name,
-    hostId:myId,status:'waiting',createdAt:Date.now(),
-    players:{},currentTurn:myId,turnIndex:0,playerOrder:[myId],lastUpdated:Date.now()
+    id:gid,boardId:boardId,boardName:board.name,
+    hostId:myId,hostPass:pass,status:'waiting',
+    createdAt:Date.now(),lastActivity:Date.now(),
+    players:{},currentTurn:myId,turnIndex:0,playerOrder:[myId]
   };
   gdata.players[myId]=me;
   try{
     await fSet('games/'+gid,gdata);
     closeM('modal-create');load(false);SND.play('create');
+    startInactiveTimer(gid);
     enterWaiting(gid,myId,gdata);
   }catch(err){
     load(false);console.error('Create error:',err);
-    toast('Error','Could not create game. Check Firebase Console - enable Realtime Database and set rules to allow read/write.');
+    toast('Error','Could not create game. Check Firebase Console.');
   }
 });
 
-// LOBBY
+// ── INACTIVE TIMER ────────────────────────────────────────────
+function startInactiveTimer(gid){
+  if(inactiveTimer)clearTimeout(inactiveTimer);
+  inactiveTimer=setTimeout(async function(){
+    try{
+      var s=await fGet('games/'+gid+'/lastActivity');
+      var last=s.val()||0;
+      if(Date.now()-last>=INACTIVE_TIMEOUT){
+        await fDel('games/'+gid);
+        toast('Game Ended','Game was inactive for 2 minutes and has been terminated.',null,6000);
+        showScreen('screen-home');
+      }
+    }catch(e){}
+  },INACTIVE_TIMEOUT);
+}
+
+function touchActivity(){
+  if(myGid)fUpd('games/'+myGid,{lastActivity:Date.now()});
+}
+
+// ── RESTORE GAME ──────────────────────────────────────────────
+G('btn-do-restore').addEventListener('click',async function(){
+  var pass=G('inp-rpass').value.trim();
+  if(!pass){toast('Warning','Please enter your password.');focusEl('inp-rpass');return;}
+  load(true);
+  try{
+    var snap=await fGet('games');
+    var all=snap.val()||{};
+    var found=[];
+    Object.values(all).forEach(function(g){
+      if(g&&g.hostPass===pass&&g.status!=='ended'){found.push(g);}
+    });
+    load(false);
+    if(!found.length){
+      toast('Not Found','No active game found with this password.',null,4000);
+      return;
+    }
+    var g=found[0];
+    // Restore as host
+    myGid=g.id;myId=g.hostId;isHost=true;
+    bd=BOARDS.find(function(b){return b.id===g.boardId;})||BOARDS[0];
+    cells=makeCells(bd);
+    var hostPlayer=g.players&&g.players[g.hostId];
+    myName=hostPlayer?hostPlayer.name:'Host';
+    closeM('modal-restore');
+    toast('Restored!','Your game has been restored successfully!',null,3000);
+    touchActivity();
+    if(g.status==='waiting'){
+      enterWaiting(g.id,myId,g);
+    }else{
+      enterGame(g.id,myId,g);
+    }
+  }catch(err){
+    load(false);console.error('Restore error:',err);
+    toast('Error','Could not restore game.');
+  }
+});
+
+// ── LOBBY ─────────────────────────────────────────────────────
 async function loadLobby(){
   var list=G('lobby-list');
   list.innerHTML='<div class="empty-lobby"><div style="font-size:2rem;margin-bottom:10px">&#8635;</div>Loading games...</div>';
   try{
     var snap=await fGet('games');
     var all=snap.val()||{};
-    var open=Object.values(all).filter(function(g){return g&&g.status==='waiting';});
+    // Auto-cleanup inactive games older than 2min
+    var now=Date.now();
+    var open=Object.values(all).filter(function(g){
+      if(!g||g.status==='ended')return false;
+      var age=now-(g.lastActivity||g.createdAt||0);
+      return age<INACTIVE_TIMEOUT;
+    });
     if(!open.length){
       list.innerHTML='<div class="empty-lobby"><div style="font-size:2rem;margin-bottom:10px">&#127922;</div>No games available right now.<br><span style="font-size:.86rem;display:block;margin-top:6px">Please create one otherwise check back later!</span></div>';
       return;
@@ -755,8 +787,8 @@ async function loadLobby(){
       var hn=g.players&&g.hostId&&g.players[g.hostId]?g.players[g.hostId].name:'?';
       var card=document.createElement('div');
       card.className='g-card';card.setAttribute('role','listitem');card.setAttribute('tabindex','0');
-      card.setAttribute('aria-label',g.name+', Board: '+g.boardName+', '+pc+' player(s)');
-      card.innerHTML='<div class="gc-name">'+esc(g.name)+'</div>'
+      card.setAttribute('aria-label',g.boardName+' game by '+hn+', '+pc+' player(s)');
+      card.innerHTML='<div class="gc-name">'+esc(g.boardName)+' Board</div>'
         +'<div class="gc-host">Host: <strong>'+esc(hn)+'</strong></div>'
         +'<div class="gc-players">&#128101; '+pc+' player'+(pc!==1?'s':'')+' waiting</div>'
         +'<div class="gc-board">&#128205; '+esc(g.boardName||'India')+'</div>';
@@ -772,17 +804,33 @@ async function loadLobby(){
 
 function openJoinModal(g){
   joiningG=g;
-  G('join-info').textContent='Joining: '+g.name+' ('+g.boardName+')';
-  G('inp-jname').value='';
-  openM('modal-join');
-  setTimeout(function(){G('inp-jname').focus();},60);
+  G('join-info').textContent='Joining '+g.boardName+' game by '+((g.players&&g.hostId&&g.players[g.hostId])?g.players[g.hostId].name:'host');
+  G('inp-jname').value='';G('inp-jpass').value='';
+  openM('modal-join');focusEl('inp-jname');
 }
 
-// JOIN GAME
+// ── JOIN GAME ─────────────────────────────────────────────────
 G('btn-do-join').addEventListener('click',async function(){
   var name=G('inp-jname').value.trim();
-  if(!name){toast('Warning','Please enter your name.');G('inp-jname').focus();return;}
+  var pass=G('inp-jpass').value.trim();
+  if(!name){toast('Warning','Please enter your name.');focusEl('inp-jname');return;}
   if(!joiningG)return;
+
+  // If password entered, treat as host restore
+  if(pass){
+    if(pass!==joiningG.hostPass){toast('Wrong Password','Incorrect host password.',null,4000);return;}
+    load(true);
+    myGid=joiningG.id;myId=joiningG.hostId;isHost=true;myName=name;
+    bd=BOARDS.find(function(b){return b.id===joiningG.boardId;})||BOARDS[0];
+    cells=makeCells(bd);
+    closeM('modal-join');load(false);
+    toast('Restored!','You have restored your host session!',null,3000);
+    touchActivity();
+    enterWaiting(joiningG.id,myId,joiningG);
+    return;
+  }
+
+  // Normal join
   load(true);
   myId=uid();myName=name;myGid=joiningG.id;isHost=false;
   bd=BOARDS.find(function(b){return b.id===joiningG.boardId;})||BOARDS[0];
@@ -793,15 +841,11 @@ G('btn-do-join').addEventListener('click',async function(){
       id:reqId,playerId:myId,playerName:name,timestamp:Date.now(),status:'pending'
     });
     SND.play('join_req');closeM('modal-join');load(false);
-    var gname=joiningG.name;
-    var waitN=toast('Request Sent','Waiting for host to admit you to '+esc(gname)+'...',null,0);
+    var gname=joiningG.boardName;
+    var waitN=toast('Request Sent','Waiting for host to admit you to '+esc(gname)+' game...',null,0);
     var done=false;
     var timer=setTimeout(async function(){
-      if(!done){
-        done=true;waitN.remove();
-        toast('No Response','No one responded to your request. Please try again later.',null,6000);
-        try{await fDel('games/'+joiningG.id+'/joinRequests/'+reqId);}catch(e){}
-      }
+      if(!done){done=true;waitN.remove();toast('No Response','No one responded. Please try again later.',null,6000);try{await fDel('games/'+joiningG.id+'/joinRequests/'+reqId);}catch(e){}}
     },30000);
     var poll=setInterval(async function(){
       if(done){clearInterval(poll);return;}
@@ -812,7 +856,7 @@ G('btn-do-join').addEventListener('click',async function(){
         if(req.status==='admitted'){
           done=true;clearInterval(poll);clearTimeout(timer);
           waitN.remove();SND.play('joined');
-          toast('Welcome!','You have been admitted to '+esc(joiningG.name)+'!',null,4000);
+          toast('Welcome!','You have been admitted!',null,4000);
           var pi=req.playerIndex||1;
           var me={id:myId,name:name,color:PCOLORS[pi%PCOLORS.length],money:START_MONEY,position:0,properties:[],turns:0,bankrupt:false};
           await fSet('games/'+joiningG.id+'/players/'+myId,me);
@@ -821,32 +865,31 @@ G('btn-do-join').addEventListener('click',async function(){
           enterWaiting(joiningG.id,myId,gs2.val());
         }else if(req.status==='denied'){
           done=true;clearInterval(poll);clearTimeout(timer);
-          waitN.remove();
-          toast('Request Denied','Your request has been rejected.',null,5000);
+          waitN.remove();toast('Request Denied','Your request has been rejected.',null,5000);
           try{await fDel('games/'+joiningG.id+'/joinRequests/'+reqId);}catch(e){}
         }
       }catch(e){}
     },1200);
   }catch(err){
-    load(false);
-    toast('Error','Could not send join request. Check Firebase connection.');
-    console.error('Join error:',err);
+    load(false);toast('Error','Could not send join request.');console.error('Join error:',err);
   }
 });
 
-// WAITING ROOM
+// ── WAITING ROOM ──────────────────────────────────────────────
 function enterWaiting(gid,pid,gdata){
   showScreen('screen-waiting');
-  G('wr-name').textContent=gdata.name;
   G('wr-board').textContent=gdata.boardName;
   G('wr-code').textContent=gid.substr(0,8).toUpperCase();
+  G('wr-pass-val').textContent=gdata.hostPass||'-';
   var sb=G('btn-start-game');
   sb.style.display=isHost?'block':'none';
   sb.disabled=true;sb.textContent='Need 1 more player...';
   stopWaiting();
   fOn('games/'+gid,function(snap){
     var gd=snap.val();if(!gd)return;
-    gs=gd;updateWaitingUI(gd,pid);
+    gs=gd;
+    G('wr-board').textContent=gd.boardName;
+    updateWaitingUI(gd,pid);
     if(isHost&&gd.joinRequests){
       Object.keys(gd.joinRequests).forEach(function(rid){
         var req=gd.joinRequests[rid];
@@ -859,6 +902,8 @@ function enterWaiting(gid,pid,gdata){
       cells=makeCells(bd);
       enterGame(gid,pid,gd);
     }
+    // Terminate if ended
+    if(gd.status==='ended'){stopWaiting();showScreen('screen-home');toast('Game Ended','The game has ended.',null,4000);}
   });
   wrL.push(gid);
 }
@@ -878,16 +923,14 @@ function updateWaitingUI(gd,pid){
   });
   var cnt=players.length;
   G('wr-status').textContent=cnt<2?'Waiting for at least 1 more player...':cnt+' players ready!';
-  if(isHost){
-    var sb=G('btn-start-game');
-    sb.disabled=cnt<2;
-    sb.textContent=cnt<2?'Need '+(2-cnt)+' more player(s)':'Start Game ('+cnt+' players)';
-  }
+  if(isHost){var sb=G('btn-start-game');sb.disabled=cnt<2;sb.textContent=cnt<2?'Need '+(2-cnt)+' more':'Start Game ('+cnt+' players)';}
 }
 
 function handleJoinReq(gid,rid,req){
   SND.play('join_req');
-  var n=toast('Join Request','<strong>'+esc(req.playerName)+'</strong> wants to join your room!',[
+  var pname=req.playerName;
+  announce(pname+' wants to join your room!');
+  var n=toast('Join Request','<strong>'+esc(pname)+'</strong> wants to join!',[
     {label:'Admit',cls:'btn-admit',fn:function(){admitP(gid,rid,req);}},
     {label:'Deny', cls:'btn-deny', fn:function(){denyP(gid,rid);}}
   ],0);
@@ -899,6 +942,7 @@ async function admitP(gid,rid,req){
   var s=await fGet('games/'+gid+'/players');
   var pi=s.val()?Object.keys(s.val()).length:1;
   await fUpd('games/'+gid+'/joinRequests/'+rid,{status:'admitted',playerIndex:pi});
+  touchActivity();
 }
 
 async function denyP(gid,rid){
@@ -910,7 +954,7 @@ G('btn-start-game').addEventListener('click',async function(){
   if(!isHost||!myGid)return;
   var s=await fGet('games/'+myGid+'/players');
   var order=Object.keys(s.val()||{});
-  await fUpd('games/'+myGid,{status:'playing',currentTurn:order[0],turnIndex:0,playerOrder:order,lastUpdated:Date.now()});
+  await fUpd('games/'+myGid,{status:'playing',currentTurn:order[0],turnIndex:0,playerOrder:order,lastUpdated:Date.now(),lastActivity:Date.now()});
 });
 
 G('btn-leave-wr').addEventListener('click',async function(){
@@ -923,20 +967,47 @@ G('btn-leave-wr').addEventListener('click',async function(){
   showScreen('screen-home');
 });
 
-// GAME
+// ── GAME ──────────────────────────────────────────────────────
 function enterGame(gid,pid,gdata){
   showScreen('screen-game');
-  G('side-gname').textContent=gdata.name;
-  G('side-bname').textContent='Board: '+gdata.boardName;
+  G('side-gname').textContent=gdata.boardName+' Board';
+  G('side-bname').textContent='Host Password: '+(gdata.hostPass||'-');
   renderBoard(gdata);updateGameUI(gdata,pid);renderChat(gdata);
   if(gL)fOff('games/'+gL);
   gL=gid;
   fOn('games/'+gid,function(snap){
     var gd=snap.val();if(!gd)return;
-    gs=gd;renderBoard(gd);updateGameUI(gd,pid);renderChat(gd);
+    var oldTurn=gs?gs.currentTurn:null;
+    gs=gd;
+    renderBoard(gd);updateGameUI(gd,pid);renderChat(gd);
+    // Announce turn change
+    if(oldTurn&&gd.currentTurn&&gd.currentTurn!==oldTurn){
+      var cur=gd.players&&gd.players[gd.currentTurn];
+      if(cur){
+        if(gd.currentTurn===pid){
+          announce('Your turn! Roll the dice.');
+          focusEl('btn-roll');
+        }else{
+          announce('It is '+cur.name+' turn.');
+        }
+      }
+    }
+    // Check for player leaving
+    if(gd.players){
+      Object.values(gd.players).forEach(function(p){
+        if(p&&p.bankrupt&&p.id!==pid){
+          // already announced via sysMsg
+        }
+      });
+    }
     if(gd.status==='ended'&&gd.winnerId){
       var w=gd.players&&gd.players[gd.winnerId];
       if(w)showWin(w,gd.winnerId===pid);
+    }
+    if(gd.status==='terminated'){
+      toast('Game Terminated','The game has been terminated.',null,5000);
+      if(gL){fOff('games/'+gL);gL=null;}
+      showScreen('screen-home');
     }
   });
 }
@@ -965,28 +1036,15 @@ function renderBoard(gd){
     var prop=props[idx];
     if(prop){
       var ow=gd.players&&gd.players[prop.ownerId];
-      if(ow){
-        var dot=document.createElement('div');dot.className='o-dot';dot.style.background=ow.color;
-        dot.title='Owned by '+ow.name;el.appendChild(dot);
-      }
+      if(ow){var dot=document.createElement('div');dot.className='o-dot';dot.style.background=ow.color;dot.title='Owned by '+ow.name;el.appendChild(dot);}
     }
-    if(cell.icon){
-      var ic=document.createElement('div');ic.className='c-icon';ic.setAttribute('aria-hidden','true');
-      ic.innerHTML=cell.icon;el.appendChild(ic);
-    }
-    var nm=document.createElement('div');nm.className='c-name';nm.setAttribute('aria-hidden','true');
-    nm.textContent=cell.name;el.appendChild(nm);
-    if(cell.price>0){
-      var pr=document.createElement('div');pr.className='c-price';pr.setAttribute('aria-hidden','true');
-      pr.textContent='RS'+cell.price;el.appendChild(pr);
-    }
+    if(cell.icon){var ic=document.createElement('div');ic.className='c-icon';ic.setAttribute('aria-hidden','true');ic.innerHTML=cell.icon;el.appendChild(ic);}
+    var nm=document.createElement('div');nm.className='c-name';nm.setAttribute('aria-hidden','true');nm.textContent=cell.name;el.appendChild(nm);
+    if(cell.price>0){var pr=document.createElement('div');pr.className='c-price';pr.setAttribute('aria-hidden','true');pr.textContent='RS'+cell.price;el.appendChild(pr);}
     var here=plys.filter(function(p2){return p2.position===idx&&!p2.bankrupt;});
     if(here.length){
       var tc=document.createElement('div');tc.className='tok-wrap';tc.setAttribute('aria-hidden','true');
-      here.forEach(function(p2){
-        var tok=document.createElement('div');tok.className='tok';tok.style.background=p2.color;
-        tok.textContent=p2.name[0].toUpperCase();tc.appendChild(tok);
-      });
+      here.forEach(function(p2){var tok=document.createElement('div');tok.className='tok';tok.style.background=p2.color;tok.textContent=p2.name[0].toUpperCase();tc.appendChild(tok);});
       el.appendChild(tc);
     }
     if(cell.type==='property'||cell.type==='station'||cell.type==='public'){
@@ -1016,17 +1074,18 @@ function updateGameUI(gd,pid){
   if(cur){
     var mine=gd.currentTurn===pid;
     myTurn=mine;
-    G('turn-bar').innerHTML=mine?'<strong>&#127922; Your Turn! Roll the dice!</strong>':'Turn: <strong>'+esc(cur.name)+'</strong>';
+    G('turn-bar').innerHTML=mine?'<strong>&#127922; Your Turn! Roll the dice!</strong>':'&#127922; '+esc(cur.name)+' is playing...';
     var rb=G('btn-roll');rb.disabled=!mine;rb.style.opacity=mine?'1':'0.4';
   }
 }
 
-// ROLL DICE
+// ── ROLL ──────────────────────────────────────────────────────
 G('btn-roll').addEventListener('click',async function(){
   if(!myTurn||!myGid||!myId)return;
   var gd=gs;if(!gd||gd.currentTurn!==myId)return;
   var player=gd.players[myId];if(!player||player.bankrupt)return;
   G('btn-roll').disabled=true;myTurn=false;
+  touchActivity();
   var d1=rnd(1,6),d2=rnd(1,6);
   SND.play('dice');
   G('die1').classList.add('spin');G('die2').classList.add('spin');
@@ -1052,25 +1111,23 @@ G('btn-roll').addEventListener('click',async function(){
 async function landOn(pos,cell,gd,player){
   if(cell.type==='salary'){await nextTurn(gd);}
   else if(cell.type==='tax'){
-    SND.play('tax');
-    var after=player.money-cell.rent;
+    SND.play('tax');var after=player.money-cell.rent;
     await fUpd('games/'+myGid+'/players/'+myId,{money:after});
     showInfo('Tax Collected!',cell.name+' - You paid RS'+cell.rent+' tax!','-RS'+cell.rent,'loss');
-    await waitInfo();
-    if(after<=0){await goBankrupt();}else{await nextTurn(gd);}
+    await waitInfo();if(after<=0){await goBankrupt();}else{await nextTurn(gd);}
   }else if(cell.type==='random'){await doEvent(gd,player);}
   else if(cell.type==='station'){SND.play('airport');await doProp(pos,cell,gd,player);}
   else if(cell.type==='property'||cell.type==='public'){await doProp(pos,cell,gd,player);}
-  else if(cell.type==='corner'){
-    if(pos===JAIL)sysMsg(player.name+' is Just Visiting Jail!');
-    await nextTurn(gd);
-  }else{await nextTurn(gd);}
+  else if(cell.type==='corner'){if(pos===JAIL)sysMsg(player.name+' is Just Visiting Jail!');await nextTurn(gd);}
+  else{await nextTurn(gd);}
 }
 
 async function doProp(pos,cell,gd,player){
   var ps=await fGet('games/'+myGid+'/properties/'+pos);
   var prop=ps.val();
   if(!prop){
+    // Announce property info
+    sysMsg(myName+' landed on '+cell.name+' (RS'+cell.price+')');
     await new Promise(function(resolve){
       var col=COLORS[cell.color]||COLORS.station||COLORS.public_||'#555';
       G('prop-cbar').style.background=col;
@@ -1079,7 +1136,7 @@ async function doProp(pos,cell,gd,player){
       G('prop-stats').innerHTML='<div class="p-stat"><span class="lbl">Price</span><span>RS'+cell.price+'</span></div>'
         +'<div class="p-stat"><span class="lbl">Base Rent</span><span>RS'+cell.rent+'</span></div>'
         +'<div class="p-stat"><span class="lbl">Your Cash</span><span>RS'+player.money+'</span></div>';
-      G('prop-owner').innerHTML='<div class="p-owner-msg"><strong>'+esc(cell.name)+'</strong><br>Current price RS'+cell.price+', Rent RS'+cell.rent+'.<br>Do you want to buy?</div>';
+      G('prop-owner').innerHTML='<div class="p-owner-msg"><strong>'+esc(cell.name)+'</strong> - Current price RS'+cell.price+', Rent RS'+cell.rent+'. Do you want to buy?</div>';
       var acts=G('prop-acts');acts.innerHTML='';
       var canBuy=player.money>=cell.price;
       var skip=document.createElement('button');skip.className='btn-s';skip.textContent='Skip';
@@ -1092,10 +1149,13 @@ async function doProp(pos,cell,gd,player){
         await fSet('games/'+myGid+'/properties/'+pos,{pos:pos,ownerId:myId,ownerName:myName,price:cell.price,currentRent:cell.rent,boughtAt:Date.now()});
         var op=(await fGet('games/'+myGid+'/players/'+myId+'/properties')).val()||[];
         await fSet('games/'+myGid+'/players/'+myId+'/properties',[].concat(op,[pos]));
-        sysMsg(myName+' bought '+cell.name+' for RS'+cell.price+'!');
+        sysMsg('&#127968; '+myName+' bought '+cell.name+' for RS'+cell.price+'!');
         resolve();
       };
-      acts.appendChild(skip);acts.appendChild(buy);openM('modal-prop');
+      acts.appendChild(skip);acts.appendChild(buy);
+      openM('modal-prop');
+      // Focus buy button if can afford
+      if(canBuy)setTimeout(function(){buy.focus();},80);else setTimeout(function(){skip.focus();},80);
     });
     var fg=(await fGet('games/'+myGid)).val();if(fg)gs=fg;
     await nextTurn(gs||gd);
@@ -1113,13 +1173,13 @@ async function doProp(pos,cell,gd,player){
       if(allOwned)rent=Math.floor(rent*1.2);
     }
     if(cell.type==='station'){SND.play('railway');}else{SND.play('pay_r');}
-    if(player.money<rent){
-      await cantPay(player,rent,prop.ownerId,owner,gd);
-    }else{
+    sysMsg('&#128176; '+myName+' landed on '+esc(owner.name)+'\'s '+cell.name+'. Rent: RS'+rent);
+    if(player.money<rent){await cantPay(player,rent,prop.ownerId,owner,gd);}
+    else{
       await fUpd('games/'+myGid+'/players/'+myId,{money:player.money-rent});
       await fUpd('games/'+myGid+'/players/'+prop.ownerId,{money:owner.money+rent});
       await fUpd('games/'+myGid+'/properties/'+pos,{currentRent:Math.floor(rent*1.05)});
-      showInfo('Beautiful Property!','Wow this property is very beautiful! This property is owned by <strong>'+esc(owner.name)+'</strong>. You pay RS'+rent+' to this user.','-RS'+rent,'loss');
+      showInfo('Wow Beautiful Property!','Wow this property is very beautiful! This property is owned by <strong>'+esc(owner.name)+'</strong>. You pay RS'+rent+' to this user.','-RS'+rent,'loss');
       await waitInfo();await nextTurn(gd);
     }
   }
@@ -1129,14 +1189,11 @@ async function doEvent(gd,player){
   var ev=bd.events[Math.floor(Math.random()*bd.events.length)];
   var amount=ev.amount;
   if(ev.bday){
-    var as=await fGet('games/'+myGid+'/players');
-    var all=as.val()||{};var total=0;
+    var as=await fGet('games/'+myGid+'/players');var all=as.val()||{};var total=0;
     var pids=Object.keys(all);
     for(var i=0;i<pids.length;i++){
       var pid=pids[i];var p=all[pid];
-      if(pid!==myId&&!p.bankrupt&&p.money>=10){
-        total+=10;await fUpd('games/'+myGid+'/players/'+pid,{money:p.money-10});
-      }
+      if(pid!==myId&&!p.bankrupt&&p.money>=10){total+=10;await fUpd('games/'+myGid+'/players/'+pid,{money:p.money-10});}
     }
     amount=total;
     await fUpd('games/'+myGid+'/players/'+myId,{money:player.money+total});
@@ -1145,8 +1202,8 @@ async function doEvent(gd,player){
   }
   if(ev.gain||amount>0)SND.play('bonus');
   var da=amount>=0?'+RS'+amount:'-RS'+Math.abs(amount);
+  sysMsg('&#127922; '+myName+': '+ev.text+' ('+da+')');
   showInfo(ev.icon+' Random Event!',ev.text,da,amount>=0?'gain':'loss');
-  sysMsg(player.name+': '+ev.text);
   await waitInfo();
   if(player.money+amount<=0){await goBankrupt();}else{await nextTurn(gd);}
 }
@@ -1156,6 +1213,7 @@ async function cantPay(player,rentDue,ownerId,owner,gd){
   var allPs=(await fGet('games/'+myGid+'/properties')).val()||{};
   if(!mps.length){
     SND.play('losing');
+    sysMsg('&#128128; '+myName+' is bankrupt and has no properties to sell!');
     showInfo('Bankrupt!','You don\'t have enough Money to pay rent RS'+rentDue+' and have no properties to sell. You are eliminated!','','loss');
     await waitInfo();await goBankrupt();return;
   }
@@ -1164,24 +1222,19 @@ async function cantPay(player,rentDue,ownerId,owner,gd){
     var sl=G('sell-list');sl.innerHTML='';selSell=null;G('btn-sell-ok').disabled=true;
     mps.forEach(function(pp){
       var cd=cells[pp];if(!cd)return;
-      var pd=allPs[pp];
-      var sp=Math.floor(((pd&&pd.price)||cd.price)*0.6);
+      var pd=allPs[pp];var sp=Math.floor(((pd&&pd.price)||cd.price)*0.6);
       var col=COLORS[cd.color]||COLORS.station||'#888';
       var item=document.createElement('div');
       item.className='sell-item';item.setAttribute('role','listitem');item.setAttribute('tabindex','0');
       item.setAttribute('aria-label',cd.name+', Sell for RS'+sp);
       item.innerHTML='<div class="si-dot" style="background:'+col+'" aria-hidden="true"></div>'
-        +'<div style="flex:1"><div class="si-name">'+esc(cd.name)+'</div>'
-        +'<div class="si-rent">Rent: RS'+((pd&&pd.currentRent)||cd.rent)+'</div></div>'
+        +'<div style="flex:1"><div class="si-name">'+esc(cd.name)+'</div><div class="si-rent">Rent: RS'+((pd&&pd.currentRent)||cd.rent)+'</div></div>'
         +'<div class="si-val">Sell: RS'+sp+'</div>';
-      item.onclick=function(){
-        document.querySelectorAll('.sell-item').forEach(function(i){i.classList.remove('sel');});
-        item.classList.add('sel');selSell=pp;G('btn-sell-ok').disabled=false;
-      };
+      item.onclick=function(){document.querySelectorAll('.sell-item').forEach(function(i){i.classList.remove('sel');});item.classList.add('sel');selSell=pp;G('btn-sell-ok').disabled=false;};
       item.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();item.click();}};
       sl.appendChild(item);
     });
-    openM('modal-sell');
+    openM('modal-sell');focusEl('sell-list');
     G('btn-sell-ok').onclick=async function(){
       if(selSell===null)return;
       var pp=selSell,cd=cells[pp],pd=allPs[pp];
@@ -1192,35 +1245,34 @@ async function cantPay(player,rentDue,ownerId,owner,gd){
       await fSet('games/'+myGid+'/players/'+myId+'/properties',np);
       var nm=player.money+sp;
       await fUpd('games/'+myGid+'/players/'+myId,{money:nm});
-      sysMsg(player.name+' sold '+cd.name+' for RS'+sp);
+      sysMsg('&#128246; '+myName+' sold '+cd.name+' for RS'+sp);
       if(nm>=rentDue){
         await fUpd('games/'+myGid+'/players/'+myId,{money:nm-rentDue});
         await fUpd('games/'+myGid+'/players/'+ownerId,{money:owner.money+rentDue});
-        var fg=(await fGet('games/'+myGid)).val();if(fg)gs=fg;
-        await nextTurn(gs||gd);
+        var fg=(await fGet('games/'+myGid)).val();if(fg)gs=fg;await nextTurn(gs||gd);
       }else{
         var fg2=(await fGet('games/'+myGid)).val();if(fg2)gs=fg2;
         await cantPay(Object.assign({},player,{money:nm,properties:np}),rentDue,ownerId,owner,fg2||gd);
       }
       resolve();
     };
-    G('btn-sell-cancel').onclick=async function(){
-      closeM('modal-sell');SND.play('losing');await goBankrupt();resolve();
-    };
+    G('btn-sell-cancel').onclick=async function(){closeM('modal-sell');SND.play('losing');await goBankrupt();resolve();};
   });
 }
 
 async function goBankrupt(){
   SND.play('losing');
   await fUpd('games/'+myGid+'/players/'+myId,{bankrupt:true,money:0});
-  sysMsg(myName+' is bankrupt and eliminated!');
-  await checkWin();
-}
-
-async function checkWin(){
-  var s=await fGet('games/'+myGid+'/players');
-  var alive=Object.values(s.val()||{}).filter(function(p){return !p.bankrupt;});
-  if(alive.length===1){await fUpd('games/'+myGid,{status:'ended',winnerId:alive[0].id});}
+  sysMsg('&#128128; '+myName+' is bankrupt and eliminated from the game!');
+  // Check if only 1 player left
+  var fresh=(await fGet('games/'+myGid+'/players')).val()||{};
+  var alive=Object.values(fresh).filter(function(p){return !p.bankrupt;});
+  if(alive.length===1){
+    await fUpd('games/'+myGid,{status:'ended',winnerId:alive[0].id});
+  } else {
+    // If this player was current turn, move to next
+    if(gs&&gs.currentTurn===myId){await nextTurn(gs);}
+  }
 }
 
 async function nextTurn(gd){
@@ -1229,18 +1281,19 @@ async function nextTurn(gd){
   if(!alive.length)return;
   var cur=alive.indexOf(gd.currentTurn);
   var next=alive[(cur+1)%alive.length];
-  await fUpd('games/'+myGid,{currentTurn:next,turnIndex:(cur+1)%alive.length,lastUpdated:Date.now()});
+  touchActivity();
+  await fUpd('games/'+myGid,{currentTurn:next,turnIndex:(cur+1)%alive.length,lastUpdated:Date.now(),lastActivity:Date.now()});
 }
 
-// INFO MODAL
+// ── INFO MODAL ─────────────────────────────────────────────────
 function showInfo(title,desc,amount,type){
   var parts=title.split(' ');
   G('ev-icon').innerHTML=parts[0];
   G('mi-h').textContent=parts.slice(1).join(' ');
-  G('ev-desc').innerHTML=desc;
-  G('ev-amt').textContent=amount;
+  G('ev-desc').innerHTML=desc;G('ev-amt').textContent=amount;
   G('ev-amt').className='ev-amt '+(type||'');
-  openM('modal-info');
+  openM('modal-info');focusEl('btn-info-ok');
+  announce(title+'. '+desc+'. '+amount);
 }
 function waitInfo(){
   return new Promise(function(resolve){
@@ -1254,8 +1307,7 @@ function viewProp(pos,gd){
   var cell=cells[pos];if(!cell)return;
   var prop=gd&&gd.properties&&gd.properties[pos];
   var col=COLORS[cell.color]||COLORS.station||'#555';
-  G('prop-cbar').style.background=col;
-  G('mp-h').textContent=cell.name;
+  G('prop-cbar').style.background=col;G('mp-h').textContent=cell.name;
   G('prop-tag').textContent=(cell.type==='station'?'Station':(cell.type==='public'?'Public Property':cell.color+' Property')).toUpperCase();
   G('prop-stats').innerHTML='<div class="p-stat"><span class="lbl">Price</span><span>RS'+cell.price+'</span></div>'
     +'<div class="p-stat"><span class="lbl">Rent</span><span>RS'+(prop?prop.currentRent:cell.rent)+'</span></div>';
@@ -1268,51 +1320,41 @@ function viewProp(pos,gd){
   var acts=G('prop-acts');acts.innerHTML='';
   var cb=document.createElement('button');cb.className='btn-p';cb.textContent='Close';
   cb.onclick=function(){closeM('modal-prop');};acts.appendChild(cb);
-  openM('modal-prop');
+  openM('modal-prop');focusEl('prop-acts');
 }
 
-// ACTION BUTTONS
+// ── ACTION BUTTONS ─────────────────────────────────────────────
 G('btn-cash').addEventListener('click',function(){
-  if(!gs||!myId)return;
-  var p=gs.players&&gs.players[myId];
+  if(!gs||!myId)return;var p=gs.players&&gs.players[myId];
   if(p)showInfo('Your Cash',esc(p.name)+', you currently have <strong>RS'+p.money+'</strong> in your account.','RS'+p.money,'gain');
 });
 G('btn-myprops').addEventListener('click',function(){
-  if(!gs||!myId)return;
-  var p=gs.players&&gs.players[myId];
+  if(!gs||!myId)return;var p=gs.players&&gs.players[myId];
   showVProps('My Properties',p?p.properties||[]:[]);
 });
 G('btn-allprops').addEventListener('click',function(){
-  if(!gs)return;
-  var all=Object.keys(gs.properties||{}).map(Number);
+  if(!gs)return;var all=Object.keys(gs.properties||{}).map(Number);
   if(!all.length){showInfo('Properties','No properties have been sold yet.','','');return;}
   showVProps('All Known Properties',all);
 });
 G('btn-others').addEventListener('click',function(){
   if(!gs||!myId)return;
-  var others=Object.keys(gs.properties||{}).map(Number).filter(function(pp){
-    var pr=gs.properties[pp];return pr&&pr.ownerId!==myId;
-  });
+  var others=Object.keys(gs.properties||{}).map(Number).filter(function(pp){var pr=gs.properties[pp];return pr&&pr.ownerId!==myId;});
   if(!others.length){showInfo('Others','Other players own no properties yet.','','');return;}
   showVProps('Others Properties',others);
 });
 
 function showVProps(title,positions){
-  G('mvp-h').textContent=title;
-  var c=G('vprops-content');c.innerHTML='';
+  G('mvp-h').textContent=title;var c=G('vprops-content');c.innerHTML='';
   if(!positions||!positions.length){
-    c.style.display='block';
-    c.innerHTML='<p style="color:rgba(255,255,255,.38)">No properties to display. All properties have been sold out or none available.</p>';
+    c.style.display='block';c.innerHTML='<p style="color:rgba(255,255,255,.38)">No properties to display.</p>';
   }else{
-    c.style.display='grid';
-    var props=(gs&&gs.properties)?gs.properties:{};
+    c.style.display='grid';var props=(gs&&gs.properties)?gs.properties:{};
     positions.forEach(function(pp){
       var cd=cells[pp];if(!cd)return;
-      var pd=props[pp];
-      var col=COLORS[cd.color]||COLORS.station||'#888';
+      var pd=props[pp];var col=COLORS[cd.color]||COLORS.station||'#888';
       var ow=pd&&gs.players&&gs.players[pd.ownerId];
-      var item=document.createElement('div');
-      item.className='vp-item';item.style.borderLeftColor=col;
+      var item=document.createElement('div');item.className='vp-item';item.style.borderLeftColor=col;
       item.innerHTML='<div class="vp-name">'+esc(cd.name)+'</div>'
         +'<div class="vp-price">RS'+cd.price+(pd?' - '+esc(ow?ow.name:pd.ownerName):'  - Available')+'</div>'
         +'<div class="vp-rent">Rent: RS'+(pd?pd.currentRent:cd.rent)+'</div>';
@@ -1324,13 +1366,18 @@ function showVProps(title,positions){
 G('btn-close-vprops').addEventListener('click',function(){closeM('modal-vprops');});
 G('btn-leave-game').addEventListener('click',async function(){
   if(!confirm('Are you sure you want to leave the game?'))return;
+  // Terminate game entirely when anyone leaves
+  if(myGid){
+    try{
+      await fUpd('games/'+myGid,{status:'terminated',lastActivity:Date.now()});
+    }catch(e){}
+  }
   if(gL){fOff('games/'+gL);gL=null;}
-  if(myGid&&myId){try{await fUpd('games/'+myGid+'/players/'+myId,{bankrupt:true});}catch(e){}}
   myGid=null;myId=null;isHost=false;gs=null;
   showScreen('screen-home');
 });
 
-// CHAT
+// ── CHAT ──────────────────────────────────────────────────────
 function sysMsg(msg){
   if(!myGid)return;
   fSet('games/'+myGid+'/chat/s'+uid(),{sender:'',text:msg,sys:true,ts:Date.now()});
@@ -1340,36 +1387,49 @@ G('chat-inp').addEventListener('keydown',function(e){if(e.key==='Enter')sendChat
 function sendChat(){
   var inp=G('chat-inp'),txt=inp.value.trim();
   if(!txt||!myGid)return;
-  inp.value='';
+  inp.value='';SND.play('message');
   fSet('games/'+myGid+'/chat/m'+uid(),{sender:myName,text:txt,sys:false,ts:Date.now(),pid:myId});
 }
+var lastChatCount=0;
 function renderChat(gd){
   if(!gd||!gd.chat)return;
   var box=G('chat-box');
   var msgs=Object.values(gd.chat).sort(function(a,b){return a.ts-b.ts;});
   var atBot=box.scrollHeight-box.scrollTop<=box.clientHeight+60;
+  // Play sound for new incoming messages (not own)
+  if(msgs.length>lastChatCount&&lastChatCount>0){
+    var newMsgs=msgs.slice(lastChatCount);
+    newMsgs.forEach(function(m){
+      if(!m.sys&&m.pid&&m.pid!==myId){SND.play('message');}
+    });
+  }
+  lastChatCount=msgs.length;
   box.innerHTML='';
   msgs.forEach(function(m){
     var d=document.createElement('div');
     d.className='chat-msg'+(m.sys?' sys-msg':'');
-    if(m.sys){d.textContent=m.text;}
+    if(m.sys){d.innerHTML=m.text;}
     else{
       var p=gs&&gs.players&&gs.players[m.pid];
       var col=p?p.color:'#888';
-      d.innerHTML='<div class="chat-sender" style="color:'+col+'">'+esc(m.sender)+'</div>'+esc(m.text);
+      // Format: "Kritika said hi"
+      d.innerHTML='<div class="chat-sender" style="color:'+col+'">'+esc(m.sender)+' said</div>'+esc(m.text);
     }
     box.appendChild(d);
   });
   if(atBot)box.scrollTop=box.scrollHeight;
 }
 
-// WIN
+// ── WIN ────────────────────────────────────────────────────────
 function showWin(winner,isMe){
   document.querySelectorAll('.modal-bg.open').forEach(function(m){m.classList.remove('open');});
   G('mw-h').textContent=isMe?'You Won!':winner.name+' Won!';
   G('win-desc').textContent=isMe?'Congratulations! You are the Indic Monopoly Champion!':'Congratulations to '+winner.name+'!';
   openM('modal-win');
+  announce(isMe?'Congratulations! You won the game!':winner.name+' has won the game!');
   if(isMe){SND.play('win');doConfetti();}
+  // Clean up game after 10 seconds
+  setTimeout(async function(){try{await fDel('games/'+myGid);}catch(e){}},10000);
 }
 G('btn-win-home').addEventListener('click',function(){
   closeM('modal-win');G('confetti-wrap').innerHTML='';
@@ -1390,7 +1450,7 @@ function doConfetti(){
   setTimeout(function(){w.innerHTML='';},7000);
 }
 
-// ESC key
+// ── ESC ────────────────────────────────────────────────────────
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){
     var m=document.querySelector('.modal-bg.open');
@@ -1398,19 +1458,19 @@ document.addEventListener('keydown',function(e){
   }
 });
 
-// BOOT
+// ── BOOT ──────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',function(){
-  console.log('Indic Monopoly starting...');
+  console.log('Indic Monopoly v2.0 starting...');
   try{
     if(!firebase.apps.length)firebase.initializeApp(FB);
     db=firebase.database();
     console.log('Firebase connected OK!');
   }catch(err){
     console.error('Firebase init failed:',err);
-    toast('Firebase Error','Could not connect to Firebase. Open browser console (F12) to see the exact error. Make sure Realtime Database is enabled.',null,0);
+    toast('Firebase Error','Could not connect to Firebase. Make sure Realtime Database is enabled.',null,0);
   }
   showScreen('screen-home');
-  console.log('Home screen shown. Game ready!');
+  console.log('Game ready!');
 });
 
 </script>
