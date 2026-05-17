@@ -260,12 +260,10 @@ body{font-family:"DM Sans",Arial,sans-serif;background:linear-gradient(135deg,#1
         </div>
       </div>
       <div class="act-grid" role="toolbar" aria-label="Game actions">
-        <button class="btn-act roll" id="btn-roll" disabled aria-label="Roll dice">&#127922; Roll Dice</button>
-        <button class="btn-act" id="btn-cash" aria-label="View cash">&#128176; My Cash</button>
+        <button class="btn-act roll" id="btn-roll" disabled aria-label="Roll dice" style="grid-column:1/-1">&#127922; Roll Dice — It's your turn!</button>
         <button class="btn-act" id="btn-myprops" aria-label="My properties">&#127968; My Props</button>
-        <button class="btn-act" id="btn-allprops" aria-label="All properties">&#128203; All Props</button>
-        <button class="btn-act" id="btn-others" aria-label="Others props">&#128101; Others</button>
-        <button class="btn-act danger" id="btn-leave-game" aria-label="Leave game">&#128682; Leave</button>
+        <button class="btn-act" id="btn-others" aria-label="Others props">&#128101; Others Props</button>
+        <button class="btn-act danger" id="btn-leave-game" aria-label="Leave game" style="grid-column:1/-1">&#128682; Leave Game</button>
       </div>
       <section class="chat-wrap" aria-label="Chat">
         <div class="chat-box" id="chat-box" role="log" aria-live="polite" aria-label="Chat messages"></div>
@@ -526,6 +524,50 @@ var BOARDS=[
     {icon:'&#127930;',text:'Chithirai Festival float prize! You get 500RS.',amount:500,gain:true}
    ],
    colors:{red:['Chennai','Coimbatore','Madurai'],blue:['Tiruchirappalli','Salem','Erode'],green:['Tirunelveli','Vellore','Thoothukudi'],pink:['Tiruppur','Dindigul','Thanjavur'],yellow:['Ranipet','Sivakasi','Karur'],orange:['Udhagamandalam','Hosur','Nagercoil'],brown:['Kumbakonam','Kancheepuram','Chidambaram'],white:['Rameswaram','Mahabalipuram','Kanyakumari'],purple:['Pollachi','Mettur','Cuddalore'],stations:['Chennai Airport','Coimbatore Airport','Madurai Airport','Tiruchirappalli Airport']}
+  }
+  ,{id:'uttarakhand',name:'Uttarakhand',capital:'Dehradun',
+   events:[
+    {icon:'&#127956;',text:'Char Dham Yatra bonus! Pilgrims brought prosperity. You get 500RS.',amount:500,gain:true},
+    {icon:'&#127958;',text:'Kedarnath trek expenses. You pay 100RS.',amount:-100,gain:false},
+    {icon:'&#127807;',text:'Phool Dei festival flower collection bonus! You get 300RS.',amount:300,gain:true},
+    {icon:'&#127881;',text:'Today is your birthday and each player pay you 10RS.',amount:10,gain:true,bday:true},
+    {icon:'&#128176;',text:'Rishikesh rafting tourism jackpot! You get 1000RS.',amount:1000,gain:true},
+    {icon:'&#129496;',text:'Yoga retreat at Haridwar expenses. You pay 80RS.',amount:-80,gain:false}
+   ],
+   colors:{red:['Dehradun','Haridwar','Rishikesh'],blue:['Nainital','Mussoorie','Roorkee'],green:['Haldwani','Rudrapur','Kashipur'],pink:['Almora','Pithoragarh','Champawat'],yellow:['Bageshwar','Chamoli','Rudraprayag'],orange:['Uttarkashi','Tehri','Pauri'],brown:['Gopeshwar','Srinagar','Lansdowne'],white:['Kotdwar','Ramnagar','Jaspur'],purple:['Chakrata','Vikasnagar','Doiwala'],stations:['Jolly Grant Airport','Haridwar Station','Dehradun Station','Kathgodam Station']}
+  },
+  {id:'uttar_pradesh',name:'Uttar Pradesh',capital:'Lucknow',
+   events:[
+    {icon:'&#127956;',text:'Kumbh Mela pilgrimage bonus at Prayagraj! You get 500RS.',amount:500,gain:true},
+    {icon:'&#127775;',text:'Taj Mahal tourism earnings! You get 300RS.',amount:300,gain:true},
+    {icon:'&#127881;',text:'Today is your birthday and each player pay you 10RS.',amount:10,gain:true,bday:true},
+    {icon:'&#127979;',text:'Make donation at Kashi Vishwanath Temple. You pay 30RS.',amount:-30,gain:false},
+    {icon:'&#128176;',text:'Lucknow Chikan embroidery business jackpot! You get 1000RS.',amount:1000,gain:true},
+    {icon:'&#127939;',text:'Kabaddi tournament entry fee. You pay 80RS.',amount:-80,gain:false}
+   ],
+   colors:{red:['Lucknow','Kanpur','Agra'],blue:['Varanasi','Prayagraj','Ghaziabad'],green:['Noida','Meerut','Bareilly'],pink:['Aligarh','Moradabad','Saharanpur'],yellow:['Gorakhpur','Firozabad','Mathura'],orange:['Muzaffarnagar','Rampur','Shahjahanpur'],brown:['Farrukhabad','Maunath Bhanjan','Hapur'],white:['Etawah','Mirzapur','Bulandshahr'],purple:['Jhansi','Orai','Banda'],stations:['Lucknow Airport','Agra Airport','Varanasi Airport','Prayagraj Station']}
+  },
+  {id:'chhattisgarh',name:'Chhattisgarh',capital:'Raipur',
+   events:[
+    {icon:'&#128139;',text:'Bastar Dussehra tribal festival bonus! You get 500RS.',amount:500,gain:true},
+    {icon:'&#127807;',text:'Chitrakote waterfall tourism earnings! You get 300RS.',amount:300,gain:true},
+    {icon:'&#127881;',text:'Today is your birthday and each player pay you 10RS.',amount:10,gain:true,bday:true},
+    {icon:'&#9973;',text:'Iron ore mining jackpot from Bailadila! You get 1000RS.',amount:1000,gain:true},
+    {icon:'&#127979;',text:'Make donation at Rajim Kumbh. You pay 30RS.',amount:-30,gain:false},
+    {icon:'&#127958;',text:'Jungle safari at Kanha expenses. You pay 100RS.',amount:-100,gain:false}
+   ],
+   colors:{red:['Raipur','Bhilai','Durg'],blue:['Bilaspur','Korba','Rajnandgaon'],green:['Jagdalpur','Raigarh','Ambikapur'],pink:['Dhamtari','Mahasamund','Kanker'],yellow:['Kondagaon','Narayanpur','Bijapur'],orange:['Sukma','Dantewada','Bemetara'],brown:['Mungeli','Baloda Bazar','Gariaband'],white:['Janjgir','Balrampur','Surajpur'],purple:['Korea','Kabirdham','Gaurela'],stations:['Raipur Airport','Bilaspur Station','Durg Station','Jagdalpur Station']}
+  },
+  {id:'haryana',name:'Haryana',capital:'Chandigarh',
+   events:[
+    {icon:'&#127806;',text:'Baisakhi harvest celebration bonus! You get 500RS.',amount:500,gain:true},
+    {icon:'&#129354;',text:'Surajkund Mela crafts fair earnings! You get 300RS.',amount:300,gain:true},
+    {icon:'&#127881;',text:'Today is your birthday and each player pay you 10RS.',amount:10,gain:true,bday:true},
+    {icon:'&#128176;',text:'Maruti Suzuki factory investment jackpot! You get 1000RS.',amount:1000,gain:true},
+    {icon:'&#127939;',text:'Wrestling dangal entry fee. You pay 80RS.',amount:-80,gain:false},
+    {icon:'&#127979;',text:'Make donation at Kurukshetra. You pay 30RS.',amount:-30,gain:false}
+   ],
+   colors:{red:['Gurugram','Faridabad','Panipat'],blue:['Ambala','Yamunanagar','Rohtak'],green:['Hisar','Karnal','Sonipat'],pink:['Panchkula','Bhiwani','Sirsa'],yellow:['Fatehabad','Jhajjar','Rewari'],orange:['Mahendragarh','Nuh','Palwal'],brown:['Kaithal','Kurukshetra','Jind'],white:['Pehowa','Narnaul','Hansi'],purple:['Ballabhgarh','Bahadurgarh','Gohana'],stations:['Chandigarh Airport','Hisar Airport','Ambala Station','Gurugram Station']}
   }
 ];
 
@@ -1075,7 +1117,10 @@ function updateGameUI(gd,pid){
     var mine=gd.currentTurn===pid;
     myTurn=mine;
     G('turn-bar').innerHTML=mine?'<strong>&#127922; Your Turn! Roll the dice!</strong>':'&#127922; '+esc(cur.name)+' is playing...';
-    var rb=G('btn-roll');rb.disabled=!mine;rb.style.opacity=mine?'1':'0.4';
+    var rb=G('btn-roll');rb.disabled=!mine;
+    rb.style.opacity=mine?'1':'0.4';
+    rb.style.display=mine?'block':'none';
+    rb.textContent=mine?'&#127922; Roll Dice — Your Turn!':'&#127922; Roll Dice';
   }
 }
 
@@ -1324,19 +1369,12 @@ function viewProp(pos,gd){
 }
 
 // ── ACTION BUTTONS ─────────────────────────────────────────────
-G('btn-cash').addEventListener('click',function(){
-  if(!gs||!myId)return;var p=gs.players&&gs.players[myId];
-  if(p)showInfo('Your Cash',esc(p.name)+', you currently have <strong>RS'+p.money+'</strong> in your account.','RS'+p.money,'gain');
-});
+// btn-cash removed
 G('btn-myprops').addEventListener('click',function(){
   if(!gs||!myId)return;var p=gs.players&&gs.players[myId];
   showVProps('My Properties',p?p.properties||[]:[]);
 });
-G('btn-allprops').addEventListener('click',function(){
-  if(!gs)return;var all=Object.keys(gs.properties||{}).map(Number);
-  if(!all.length){showInfo('Properties','No properties have been sold yet.','','');return;}
-  showVProps('All Known Properties',all);
-});
+// btn-allprops removed
 G('btn-others').addEventListener('click',function(){
   if(!gs||!myId)return;
   var others=Object.keys(gs.properties||{}).map(Number).filter(function(pp){var pr=gs.properties[pp];return pr&&pr.ownerId!==myId;});
