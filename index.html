@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Indic Monopoly</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"DM Sans",Arial,sans-serif;background:linear-gradient(135deg,#1A0A00,#2D1500 40%,#0D1B35);min-height:100vh;color:#fff;overflow-x:hidden}
+.skip-link{position:absolute;top:-100px;left:16px;background:#FF6B00;color:#fff;padding:8px 16px;border-radius:4px;z-index:9999;transition:top .2s}
+.skip-link:focus{top:16px}
+.screen{display:none;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;padding:20px}
+.screen.active{display:flex}
+.logo{text-align:center;margin-bottom:36px}
+.logo-wheel{width:76px;height:76px;border:3px solid #FF6B00;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 14px;animation:spin 20s linear infinite}
+.logo-title{font-size:clamp(2rem,6vw,3.8rem);font-weight:900;background:linear-gradient(135deg,#F0C040,#FF6B00,#C9971A);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.1;font-family:serif}
+.logo-sub{font-size:1.1rem;color:rgba(255,255,255,.5);margin-top:8px}
+.card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:36px;width:100%;max-width:420px}
+.btn-p{display:block;width:100%;padding:15px 22px;background:linear-gradient(135deg,#FF6B00,#E55B00);color:#fff;border:none;border-radius:12px;font-size:1.05rem;font-weight:700;cursor:pointer;margin-bottom:14px;transition:all .2s;font-family:inherit}
+.btn-p:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(255,107,0,.4)}
+.btn-p:focus{outline:3px solid #F0C040;outline-offset:2px}
+.btn-p:disabled{opacity:.38;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-s{display:block;width:100%;padding:15px 22px;background:rgba(255,255,255,.09);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:12px;font-size:1.05rem;font-weight:600;cursor:pointer;margin-bottom:14px;transition:all .2s;font-family:inherit}
+.btn-s:hover{background:rgba(255,255,255,.16);transform:translateY(-2px)}
+.btn-s:focus{outline:3px solid #F0C040;outline-offset:2px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:linear-gradient(135deg,#1e2d4a,#2a1a0e);border:1px solid rgba(255,255,255,.15);border-radius:22px;padding:32px;width:100%;max-width:460px}
+.modal h2{font-family:serif;font-size:1.5rem;color:#F0C040;margin-bottom:20px}
+.modal label{display:block;font-size:.78rem;color:rgba(255,255,255,.5);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.modal input,.modal select{width:100%;padding:12px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:10px;color:#fff;font-size:.96rem;margin-bottom:14px;font-family:inherit}
+.modal input:focus,.modal select:focus{outline:none;border-color:#FF6B00;box-shadow:0 0 0 3px rgba(255,107,0,.2)}
+.modal input::placeholder{color:rgba(255,255,255,.32)}
+.modal select option{background:#1e2d4a}
+.mrow{display:flex;gap:10px;margin-top:6px}
+.mrow .btn-p,.mrow .btn-s{margin-bottom:0}
+.lobby-wrap{width:100%;max-width:880px}
+.lobby-hdr{text-align:center;margin-bottom:24px}
+.lobby-hdr h2{font-family:serif;font-size:1.7rem;color:#F0C040}
+.lobby-hdr p{color:rgba(255,255,255,.38);margin-top:6px;font-size:.88rem}
+.lobby-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;max-height:52vh;overflow-y:auto;padding:2px}
+.g-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:18px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.g-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#FF6B00,#F0C040)}
+.g-card:hover{background:rgba(255,255,255,.11);transform:translateY(-2px);border-color:rgba(255,107,0,.4)}
+.g-card:focus{outline:3px solid #F0C040;outline-offset:2px}
+.gc-name{font-size:1rem;font-weight:700;color:#F0C040;margin-bottom:3px}
+.gc-host{font-size:.78rem;color:rgba(255,255,255,.45)}
+.gc-players{font-size:.74rem;color:rgba(255,255,255,.35);margin-top:4px}
+.gc-board{display:inline-block;background:rgba(255,107,0,.18);color:#FF6B00;padding:2px 9px;border-radius:20px;font-size:.68rem;font-weight:700;margin-top:7px;border:1px solid rgba(255,107,0,.28)}
+.empty-lobby{text-align:center;padding:50px 20px;color:rgba(255,255,255,.38);font-size:.96rem;line-height:2;grid-column:1/-1}
+.waiting-wrap{text-align:center;max-width:580px;width:100%}
+.waiting-wrap h2{font-family:serif;font-size:1.9rem;color:#F0C040;margin-bottom:6px}
+.room-code{display:inline-block;background:rgba(255,107,0,.12);border:1px dashed #FF6B00;border-radius:8px;padding:6px 20px;font-family:monospace;font-size:1.3rem;letter-spacing:4px;color:#FF6B00;margin:12px 0 18px}
+.players-row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:18px 0}
+.p-chip{display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:40px;padding:7px 14px}
+.p-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
+.p-chip-name{font-size:.84rem;font-weight:600}
+.host-badge{font-size:.6rem;background:#C9971A;color:#1A0A00;padding:2px 7px;border-radius:20px;font-weight:700;text-transform:uppercase}
+.wr-status{color:rgba(255,255,255,.38);font-size:.85rem;margin-bottom:14px}
+.btn-start-g{padding:13px 38px;background:linear-gradient(135deg,#2E7D32,#1B5E20);color:#fff;border:none;border-radius:12px;font-size:1.05rem;font-weight:700;cursor:pointer;transition:all .2s;font-family:inherit;margin-top:6px}
+.btn-start-g:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(46,125,50,.4)}
+.btn-start-g:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-start-g:focus{outline:3px solid #F0C040;outline-offset:2px}
+#screen-game{flex-direction:column;align-items:stretch;padding:0}
+.game-layout{display:grid;grid-template-columns:1fr 300px;height:100vh}
+@media(max-width:820px){.game-layout{grid-template-columns:1fr;height:auto;min-height:100vh}}
+.board-wrap{display:flex;align-items:center;justify-content:center;padding:14px;overflow:auto;background:rgba(0,0,0,.2)}
+.board{display:grid;grid-template-columns:62px repeat(8,1fr) 62px;grid-template-rows:62px repeat(8,1fr) 62px;width:min(550px,93vw);height:min(550px,93vw);border:2px solid rgba(255,255,255,.22);border-radius:8px;overflow:hidden;background:rgba(8,18,38,.96)}
+.cell{border:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;padding:2px;overflow:hidden;cursor:default}
+.cell.can-click{cursor:pointer}
+.cell.can-click:hover{background:rgba(255,255,255,.06)}
+.cell.can-click:focus{outline:2px solid #F0C040}
+.cell.corner-cell{background:rgba(255,255,255,.04)}
+.c-bar{position:absolute;top:0;left:0;right:0;height:5px}
+.c-icon{font-size:.88rem;margin-bottom:1px}
+.c-name{font-size:.37rem;text-align:center;line-height:1.2;color:rgba(255,255,255,.8);word-break:break-word;max-width:100%;padding:1px}
+.c-price{font-size:.34rem;color:#F0C040;font-weight:700}
+.o-dot{position:absolute;bottom:2px;right:2px;width:6px;height:6px;border-radius:50%}
+.tok-wrap{position:absolute;bottom:2px;left:2px;display:flex;flex-wrap:wrap;gap:1px}
+.tok{width:8px;height:8px;border-radius:50%;border:1px solid rgba(255,255,255,.5);font-size:5px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700}
+.b-center{grid-column:2/10;grid-row:2/10;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,.015)}
+.b-flag{font-size:clamp(1.4rem,3.5vw,2.6rem);margin-bottom:4px}
+.b-title{font-family:serif;font-size:clamp(.65rem,1.8vw,1.2rem);font-weight:900;background:linear-gradient(135deg,#F0C040,#FF6B00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-align:center;line-height:1.2}
+.b-sub{font-size:clamp(.38rem,1vw,.65rem);color:rgba(255,255,255,.28);margin-top:3px;text-align:center}
+.side{display:flex;flex-direction:column;background:rgba(0,0,0,.44);border-left:1px solid rgba(255,255,255,.07);overflow:hidden}
+.side-hdr{padding:12px 14px;background:rgba(255,107,0,.08);border-bottom:1px solid rgba(255,255,255,.07)}
+.side-gname{font-family:serif;font-size:.92rem;color:#F0C040}
+.side-bname{font-size:.7rem;color:rgba(255,255,255,.32);margin-top:2px}
+.turn-bar{padding:7px 12px;font-size:.78rem;color:rgba(255,255,255,.5);text-align:center;background:rgba(255,107,0,.07);border-bottom:1px solid rgba(255,255,255,.06)}
+.turn-bar strong{color:#FF6B00}
+.pstrip{padding:9px 11px;display:flex;flex-direction:column;gap:5px;border-bottom:1px solid rgba(255,255,255,.07)}
+.p-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;position:relative}
+.p-row.my-turn{background:rgba(255,107,0,.12);border:1px solid rgba(255,107,0,.26)}
+.p-av2{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.p-name{flex:1;font-size:.74rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-money{font-size:.72rem;color:#F0C040;font-weight:700;white-space:nowrap}
+.p-out{text-decoration:line-through;opacity:.42}
+.dice-row{padding:9px 12px;display:flex;align-items:center;gap:9px;border-bottom:1px solid rgba(255,255,255,.07)}
+.die{width:40px;height:40px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.25rem;box-shadow:0 3px 10px rgba(0,0,0,.3);user-select:none;flex-shrink:0}
+.die.spin{animation:diceAnim .55s ease}
+.dice-info{font-size:.72rem;color:rgba(255,255,255,.42);flex:1}
+.dice-info strong{color:#fff;display:block;font-size:.78rem}
+.act-grid{padding:9px 12px;display:grid;grid-template-columns:1fr 1fr;gap:5px;border-bottom:1px solid rgba(255,255,255,.07)}
+.btn-act{padding:8px 5px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:rgba(255,255,255,.8);font-family:inherit;font-size:.68rem;font-weight:600;cursor:pointer;transition:all .15s;text-align:center}
+.btn-act:hover{background:rgba(255,255,255,.13)}
+.btn-act:focus{outline:2px solid #F0C040;outline-offset:1px}
+.btn-act.roll{background:rgba(255,107,0,.18);border-color:rgba(255,107,0,.36);color:#FF6B00}
+.btn-act.roll:hover{background:rgba(255,107,0,.3)}
+.btn-act.roll:disabled{opacity:.35;cursor:not-allowed}
+.btn-act.danger{background:rgba(198,40,40,.1);border-color:rgba(198,40,40,.22);color:rgba(255,120,120,.82)}
+.btn-act.danger:hover{background:rgba(198,40,40,.26)}
+.chat-wrap{flex:1;display:flex;flex-direction:column;min-height:0}
+.chat-box{flex:1;overflow-y:auto;padding:7px 11px;display:flex;flex-direction:column;gap:4px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent}
+.chat-msg{background:rgba(255,255,255,.04);border-radius:6px;padding:5px 8px;font-size:.72rem;line-height:1.4;word-break:break-word}
+.chat-msg.sys-msg{background:rgba(255,107,0,.05);border-left:2px solid #FF6B00;color:rgba(255,255,255,.52);font-style:italic}
+.chat-sender{font-weight:700;margin-bottom:1px;font-size:.68rem}
+.chat-irow{display:flex;gap:5px;padding:7px 11px;background:rgba(0,0,0,.3);border-top:1px solid rgba(255,255,255,.05)}
+.chat-inp{flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:6px 10px;color:#fff;font-size:.75rem;font-family:inherit}
+.chat-inp:focus{outline:none;border-color:#FF6B00}
+.chat-inp::placeholder{color:rgba(255,255,255,.26)}
+.chat-send{background:#FF6B00;border:none;border-radius:7px;color:#fff;padding:0 11px;cursor:pointer;font-size:.85rem;transition:background .15s}
+.chat-send:hover{background:#E55B00}
+.chat-send:focus{outline:2px solid #F0C040}
+.notif-area{position:fixed;top:14px;right:14px;z-index:9000;display:flex;flex-direction:column;gap:7px;max-width:330px}
+.notif{background:rgba(18,30,55,.96);border:1px solid rgba(255,255,255,.12);border-left:4px solid #FF6B00;border-radius:10px;padding:13px 16px;animation:slideIn .3s ease;font-size:.82rem;line-height:1.5}
+.notif-title{font-weight:700;color:#F0C040;margin-bottom:2px}
+.notif-btns{display:flex;gap:6px;margin-top:9px}
+.notif-btns button{flex:1;padding:6px;border-radius:7px;border:none;font-family:inherit;font-size:.76rem;font-weight:700;cursor:pointer;transition:all .15s}
+.btn-admit{background:#2E7D32;color:#fff}
+.btn-admit:hover{background:#1B5E20}
+.btn-deny{background:rgba(255,255,255,.1);color:rgba(255,255,255,.65)}
+.btn-deny:hover{background:rgba(198,40,40,.28);color:#fff}
+.prop-modal{background:linear-gradient(135deg,#1e2d4a,#2a1a0e);border-radius:18px;padding:26px;width:100%;max-width:370px;border:1px solid rgba(255,255,255,.12);animation:popIn .3s ease}
+.p-cbar{height:7px;border-radius:4px;margin-bottom:16px}
+.prop-modal h3{font-family:serif;font-size:1.3rem;color:#F0C040;margin-bottom:3px}
+.prop-tag{font-size:.68rem;color:rgba(255,255,255,.36);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
+.p-stat{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.82rem}
+.p-stat:last-of-type{border-bottom:none}
+.p-stat .lbl{color:rgba(255,255,255,.42)}
+.p-owner-msg{margin:12px 0;padding:10px 13px;background:rgba(255,255,255,.04);border-radius:8px;font-size:.82rem;line-height:1.5;color:rgba(255,255,255,.68)}
+.p-owner-msg .oname{color:#FF6B00;font-weight:700}
+.ev-card{background:linear-gradient(135deg,#1e2d4a,#1a0e2a);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:28px;width:100%;max-width:390px;text-align:center;animation:popIn .3s ease}
+.ev-icon{font-size:2.8rem;margin-bottom:9px}
+.ev-title{font-family:serif;font-size:1.25rem;color:#F0C040;margin-bottom:9px}
+.ev-desc{font-size:.86rem;color:rgba(255,255,255,.65);line-height:1.6;margin-bottom:16px}
+.ev-amt{font-size:1.45rem;font-weight:700;margin-bottom:12px}
+.ev-amt.gain{color:#81C784}
+.ev-amt.loss{color:#EF5350}
+.sell-list{max-height:270px;overflow-y:auto;margin:10px 0}
+.sell-item{display:flex;align-items:center;gap:9px;padding:8px 10px;background:rgba(255,255,255,.04);border-radius:8px;margin-bottom:6px;cursor:pointer;border:2px solid transparent;transition:all .15s}
+.sell-item:hover{border-color:#FF6B00;background:rgba(255,107,0,.08)}
+.sell-item:focus{outline:2px solid #F0C040}
+.sell-item.sel{border-color:#FF6B00;background:rgba(255,107,0,.13)}
+.si-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.si-name{flex:1;font-size:.8rem;font-weight:600}
+.si-rent{font-size:.68rem;color:rgba(255,255,255,.35)}
+.si-val{font-size:.74rem;color:#F0C040;font-weight:700}
+.vprops-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:300px;overflow-y:auto;margin:9px 0}
+.vp-item{background:rgba(255,255,255,.04);border-radius:8px;padding:8px 10px;border-left:4px solid}
+.vp-name{font-size:.75rem;font-weight:600;margin-bottom:2px}
+.vp-price{font-size:.67rem;color:#F0C040}
+.vp-rent{font-size:.63rem;color:rgba(255,255,255,.32)}
+.win-card{text-align:center;padding:38px}
+.win-icon{font-size:4.5rem;margin-bottom:12px;animation:bounce 1s infinite}
+.win-card h2{font-family:serif;font-size:2rem;background:linear-gradient(135deg,#F0C040,#FF6B00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:9px}
+.win-card p{font-size:1rem;color:rgba(255,255,255,.58);margin-bottom:22px}
+.confetti-wrap{position:fixed;inset:0;pointer-events:none;z-index:99999}
+.cfp{position:absolute;border-radius:2px;animation:cfFall linear forwards}
+.loader{position:fixed;inset:0;background:rgba(0,0,0,.82);display:none;align-items:center;justify-content:center;z-index:99999;flex-direction:column;gap:12px}
+.loader.on{display:flex}
+.spin-ring{width:42px;height:42px;border:4px solid rgba(255,255,255,.1);border-top-color:#FF6B00;border-radius:50%;animation:spin .8s linear infinite}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.live-dot{display:inline-block;width:7px;height:7px;background:#4CAF50;border-radius:50%;margin-right:5px;animation:pulse 2s infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes popIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(38px)}to{opacity:1;transform:translateX(0)}}
+@keyframes diceAnim{0%,100%{transform:rotate(0)}25%{transform:rotate(-18deg) scale(1.1)}75%{transform:rotate(18deg) scale(1.1)}}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-13px)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes cfFall{0%{transform:translateY(-10px) rotate(0);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}
+:focus-visible{outline:3px solid #F0C040!important;outline-offset:2px!important}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:2px}
+</style>
+</head>
+<body>
+<a href="#screen-home" class="skip-link">Skip to main content</a>
+<div id="notif-area" class="notif-area" role="status" aria-live="polite"></div>
+<div id="loader" class="loader" role="status" aria-live="polite">
+  <div class="spin-ring"></div>
+  <div style="color:rgba(255,255,255,.6);font-size:.85rem">Loading...</div>
+</div>
+
+<!-- HOME -->
+<div id="screen-home" class="screen active" role="main" aria-label="Home Screen">
+  <div class="logo">
+    <div class="logo-wheel" aria-hidden="true">&#9784;</div>
+    <div class="logo-title">Indic Monopoly</div>
+    <div class="logo-sub">India's Own Board Game</div>
+  </div>
+  <div class="card">
+    <button class="btn-p" id="btn-create" aria-label="Create a new game">&#127918; Create Game</button>
+    <button class="btn-s" id="btn-join" aria-label="Join an existing game">&#128682; Join Game</button>
+    <p style="text-align:center;font-size:.7rem;color:rgba(255,255,255,.26);margin-top:4px">
+      <span class="live-dot" aria-hidden="true"></span>Real-time multiplayer &bull; Screen reader friendly
+    </p>
+  </div>
+</div>
+
+<!-- LOBBY -->
+<div id="screen-lobby" class="screen" role="main" aria-label="Game Lobby">
+  <div class="lobby-wrap">
+    <div class="lobby-hdr">
+      <h2>&#127919; Available Games</h2>
+      <p>Click any room to request to join</p>
+    </div>
+    <div id="lobby-list" class="lobby-grid" role="list" aria-label="Game rooms"></div>
+    <div style="text-align:center;margin-top:20px">
+      <button class="btn-s" id="btn-back-lobby" style="max-width:240px">&larr; Back to Home</button>
+    </div>
+  </div>
+</div>
+
+<!-- WAITING ROOM -->
+<div id="screen-waiting" class="screen" role="main" aria-label="Waiting Room">
+  <div class="waiting-wrap">
+    <h2 id="wr-name">Game Room</h2>
+    <div style="color:rgba(255,255,255,.42);font-size:.83rem">Board: <strong id="wr-board" style="color:#FF6B00">-</strong></div>
+    <div class="room-code" id="wr-code" aria-label="Room code">-</div>
+    <div id="wr-players" class="players-row" role="list" aria-label="Players in room"></div>
+    <div id="wr-status" class="wr-status">Waiting for players...</div>
+    <button class="btn-start-g" id="btn-start-game" disabled style="display:none">Start Game &rarr;</button>
+    <button class="btn-s" id="btn-leave-wr" style="margin-top:12px;padding:10px 26px;width:auto">Leave Room</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="screen-game" class="screen" role="main" aria-label="Game Board">
+  <div class="game-layout">
+    <div class="board-wrap">
+      <div class="board" id="game-board" role="grid" aria-label="Indic Monopoly Board"></div>
+    </div>
+    <aside class="side" aria-label="Game Controls">
+      <div class="side-hdr">
+        <div class="side-gname" id="side-gname">Game</div>
+        <div class="side-bname" id="side-bname">Board</div>
+      </div>
+      <div class="turn-bar" id="turn-bar" aria-live="polite" aria-atomic="true">Waiting...</div>
+      <div class="pstrip" id="pstrip" role="list" aria-label="Players"></div>
+      <div class="dice-row">
+        <div class="die" id="die1" aria-label="Die 1">&#127922;</div>
+        <div class="die" id="die2" aria-label="Die 2">&#127922;</div>
+        <div class="dice-info">
+          <strong id="dice-result">Roll the dice!</strong>
+          <span id="dice-moved"></span>
+        </div>
+      </div>
+      <div class="act-grid" role="toolbar" aria-label="Game actions">
+        <button class="btn-act roll" id="btn-roll" disabled aria-label="Roll dice">&#127922; Roll Dice</button>
+        <button class="btn-act" id="btn-cash" aria-label="View cash">&#128176; My Cash</button>
+        <button class="btn-act" id="btn-myprops" aria-label="My properties">&#127968; My Props</button>
+        <button class="btn-act" id="btn-allprops" aria-label="All properties">&#128203; All Props</button>
+        <button class="btn-act" id="btn-others" aria-label="Others props">&#128101; Others</button>
+        <button class="btn-act danger" id="btn-leave-game" aria-label="Leave game">&#128682; Leave</button>
+      </div>
+      <section class="chat-wrap" aria-label="Chat">
+        <div class="chat-box" id="chat-box" role="log" aria-live="polite" aria-label="Chat messages"></div>
+        <div class="chat-irow">
+          <label for="chat-inp" class="sr-only">Type a message</label>
+          <input type="text" id="chat-inp" class="chat-inp" placeholder="Type a message..." maxlength="200">
+          <button class="chat-send" id="btn-chat-send" aria-label="Send message">&#10148;</button>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<!-- MODAL: CREATE -->
+<div id="modal-create" class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="mc-h">
+  <div class="modal">
+    <h2 id="mc-h">&#127918; Create New Game</h2>
+    <label for="inp-cname">Your Name</label>
+    <input type="text" id="inp-cname" placeholder="Enter your name..." maxlength="20" autocomplete="given-name">
+    <label for="inp-gname">Room Name</label>
+    <input type="text" id="inp-gname" placeholder="e.g. Game of Kritika..." maxlength="30">
+    <label for="inp-board">Select Board (State)</label>
+    <select id="inp-board"></select>
+    <div class="mrow">
+      <button class="btn-s" id="btn-cancel-create">Cancel</button>
+      <button class="btn-p" id="btn-do-create">Create Game &rarr;</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: JOIN NAME -->
+<div id="modal-join" class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="mj-h">
+  <div class="modal">
+    <h2 id="mj-h">&#128682; Join Game</h2>
+    <p id="join-info" style="color:rgba(255,255,255,.42);font-size:.83rem;margin-bottom:14px">Joining game...</p>
+    <label for="inp-jname">Your Name</label>
+    <input type="text" id="inp-jname" placeholder="Enter your name..." maxlength="20" autocomplete="given-name">
+    <div class="mrow">
+      <button class="btn-s" id="btn-cancel-join">Cancel</button>
+      <button class="btn-p" id="btn-do-join">Request to Join &rarr;</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: PROPERTY -->
+<div id="modal-prop" class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="mp-h">
+  <div class="prop-modal">
+    <div class="p-cbar" id="prop-cbar"></div>
+    <h3 id="mp-h">Property</h3>
+    <div class="prop-tag" id="prop-tag"></div>
+    <div id="prop-stats"></div>
+    <div id="prop-owner"></div>
+    <div class="mrow" id="prop-acts" style="margin-top:14px"></div>
+  </div>
+</div>
+
+<!-- MODAL: INFO/EVENT -->
+<div id="modal-info" class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="mi-h">
+  <div class="ev-card">
+    <div class="ev-icon" id="ev-icon">i</div>
+    <div class="ev-title" id="mi-h">Info</div>
+    <div class="ev-desc" id="ev-desc"></div>
+    <div class="ev-amt" id="ev-amt"></div>
+    <button class="btn-p" id="btn-info-ok" style="max-width:180px;margin:0 auto">OK</button>
+  </div>
+</div>
+
+<!-- MODAL: SELL -->
+<div id="modal-sell" class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="ms-h">
+  <div class="modal" style="max-width:450px">
+    <h2 id="ms-h">&#128246; Sell a Property</h2>
+    <p id="sell-reason" style="color:rgba(255,80,80,.8);font-size:.82rem;margin-bottom:9px"></p>
+    <div id="sell-list" class="sell-list" role="list"></div>
+    <div class="mrow">
+      <button class="btn-s" id="btn-sell-cancel">Cancel</button>
+      <button class="btn-p" id="btn-sell-ok" disabled>Sell Selected</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: VIEW PROPS -->
+<div id="modal-vprops" class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="mvp-h">
+  <div class="modal" style="max-width:500px">
+    <h2 id="mvp-h">Properties</h2>
+    <div id="vprops-content" class="vprops-grid"></div>
+    <button class="btn-p" id="btn-close-vprops" style="margin-top:9px">Close</button>
+  </div>
+</div>
+
+<!-- MODAL: WIN -->
+<div id="modal-win" class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="mw-h">
+  <div class="win-card">
+    <div class="win-icon" aria-hidden="true">&#127942;</div>
+    <h2 id="mw-h">You Won!</h2>
+    <p id="win-desc">Congratulations!</p>
+    <button class="btn-p" id="btn-win-home" style="max-width:230px;margin:0 auto">&#127968; Back to Home</button>
+  </div>
+</div>
+
+<div class="confetti-wrap" id="confetti-wrap" aria-hidden="true"></div>
+
+<script>
+
+// ============================================================
+// INDIC MONOPOLY - Complete Implementation
+// ============================================================
+
+// File check
+if(window.location.protocol==='file:'){
+  document.body.innerHTML='<div style="font-family:sans-serif;background:#1A0A00;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px"><div style="background:rgba(255,255,255,.08);border:2px solid #FF6B00;border-radius:16px;padding:36px;max-width:500px;text-align:center;color:#fff"><div style="font-size:3rem;margin-bottom:16px">&#9888;</div><h2 style="color:#F0C040;margin-bottom:12px">Please use local server!</h2><p style="color:rgba(255,255,255,.7);line-height:1.7">Double-click <strong>START-GAME.bat</strong><br>Then open <strong>http://localhost:8080</strong></p></div></div>';
+  throw new Error('file:// not supported');
+}
+
+// Firebase Config
+var FB={
+  apiKey:'AIzaSyDx95S0-Ao8fMKhWM6nfoq-tv856rif3l4',
+  authDomain:'indic-monopoly.firebaseapp.com',
+  databaseURL:'https://indic-monopoly-default-rtdb.asia-southeast1.firebasedatabase.app',
+  projectId:'indic-monopoly',
+  storageBucket:'indic-monopoly.firebasestorage.app',
+  messagingSenderId:'479342520821',
+  appId:'1:479342520821:web:4efa6b2f7aa98c93e758bc'
+};
+
+// Sound
+var SND={
+  folder:'./sounds/',
+  map:{
+    bonus:'bonus.mp3',create:'create.mp3',dice:'dice.mp3',
+    airport:'airport.mp3',join_req:'join_req.mp3',joined:'joined.mp3',
+    losing:'losing.mp3',pay_r:['pay_r.mp3','pay_r1.mp3','pay_r2.mp3'],
+    tax:'tax.mp3',railway:'railway.mp3',
+    salary:['salary.mp3','salary2.mp3'],
+    win:'win.mp3',prop:'prop.mp3'
+  },
+  play:function(k){
+    try{
+      var f=this.map[k];
+      if(Array.isArray(f))f=f[Math.floor(Math.random()*f.length)];
+      if(!f)return;
+      var a=new Audio(this.folder+f);
+      a.volume=0.65;a.play().catch(function(){});
+    }catch(e){}
+  }
+};
+
+// Colors
+var COLORS={
+  red:'#C62828',blue:'#1565C0',green:'#2E7D32',pink:'#AD1457',
+  yellow:'#F9A825',orange:'#E65100',brown:'#4E342E',
+  white:'rgba(205,205,205,.85)',purple:'#6A1B9A',
+  station:'#37474F',public_:'#00695C'
+};
+var PCOLORS=['#FF6B00','#1565C0','#2E7D32','#AD1457','#6A1B9A','#E65100'];
+var START_MONEY=1500,SALARY=200,JAIL=10,GO_JAIL=28;
+
+// Boards
+var BOARDS=[
+  {id:'rajasthan',name:'Rajasthan',capital:'Jaipur',
+   events:[
+    {icon:'&#127914;',text:'You attend Teej Festival! You get a 500RS for Teej Bonus!',amount:500,gain:true},
+    {icon:'&#128024;',text:'You go to Gangaur Savari. You pay 100RS.',amount:-100,gain:false},
+    {icon:'&#127979;',text:'Make donation for Poor. You pay 30RS.',amount:-30,gain:false},
+    {icon:'&#127881;',text:'Today is your birthday and each player pay you 10RS.',amount:10,gain:true,bday:true},
+    {icon:'&#128176;',text:'You got a jackpot 500RS!',amount:500,gain:true},
+    {icon:'&#128176;',text:'You got a jackpot 1000RS!',amount:1000,gain:true}
+   ],
+   colors:{
+    red:['Jaipur','Jodhpur','Udaipur'],blue:['Bikaner','Ajmer','Alwar'],
+    green:['Kota','Sikar','Pali'],pink:['Bharatpur','Chittorgarh','Jaisalmer'],
+    yellow:['Barmer','Nagaur','Tonk'],orange:['Sawai Madhopur','Jhalawar','Hanumangarh'],
+    brown:['Churu','Dholpur','Karauli'],white:['Dungarpur','Baran','Jhunjhunu'],
+    purple:['Sri Ganganagar','Dausa','Bundi'],
+    stations:['Jaipur Airport','Jodhpur Station','Bikaner Station','Udaipur Airport']
+   }
+  },
+  {id:'gujarat',name:'Gujarat',capital:'Gandhinagar',
+   events:[
+    {icon:'&#129825;',text:'Uttarayan Kite Festival! You win the kite battle! +500RS',amount:500,gain:true},
+    {icon:'&#127917;',text:'Navratri Garba night! Costume expenses. You pay 80RS.',amount:-80,gain:false},
+    {icon:'&#129443;',text:'Gir Lion Safari! Ticket costs. You pay 100RS.',amount:-100,gain:false},
+    {icon:'&#127881;',text:'Today is your birthday and each player pay you 10RS.',amount:10,gain:true,bday:true},
+    {icon:'&#128296;',text:'Diamond business bonus from Surat! +1000RS',amount:1000,gain:true},
+    {icon:'&#128176;',text:'Rann Utsav Bonus! You got 500RS.',amount:500,gain:true}
+   ],
+   colors:{
+    red:['Ahmedabad','Surat','Vadodara'],blue:['Rajkot','Bhavnagar','Jamnagar'],
+    green:['Gandhinagar','Anand','Junagadh'],pink:['Morbi','Mehsana','Kutch'],
+    yellow:['Navsari','Valsad','Surendranagar'],orange:['Amreli','Patan','Botad'],
+    brown:['Dahod','Narmada','Tapi'],white:['Kheda','Banaskantha','Panchmahals'],
+    purple:['Aravalli','Chhota Udaipur','Devbhumi Dwarka'],
+    stations:['Ahmedabad Airport','Surat Station','Rajkot Airport','Vadodara Station']
+   }
+  },
+  {id:'maharashtra',name:'Maharashtra',capital:'Mumbai',
+   events:[
+    {icon:'&#128024;',text:'Ganesh Chaturthi celebrations! Make donation 80RS.',amount:-80,gain:false},
+    {icon:'&#127914;',text:'Lavani performance earnings! You get 500RS.',amount:500,gain:true},
+    {icon:'&#9968;',text:'Trekking at Sahyadri! You pay 100RS expenses.',amount:-100,gain:false},
+    {icon:'&#127881;',text:'Today is your birthday and each player pay you 10RS.',amount:10,gain:true,bday:true},
+    {icon:'&#127916;',text:'Bollywood jackpot! You get 1000RS.',amount:1000,gain:true},
+    {icon:'&#128176;',text:'Nashik Grape Festival bonus! You get 500RS.',amount:500,gain:true}
+   ],
+   colors:{
+    red:['Mumbai','Pune','Nagpur'],blue:['Nashik','Aurangabad','Solapur'],
+    green:['Thane','Kolhapur','Nanded'],pink:['Sangli','Satara','Ratnagiri'],
+    yellow:['Akola','Latur','Amravati'],orange:['Jalgaon','Dhule','Ahmednagar'],
+    brown:['Osmanabad','Parbhani','Buldhana'],white:['Beed','Washim','Yavatmal'],
+    purple:['Nandurbar','Chandrapur','Gondia'],
+    stations:['Mumbai Airport','Pune Airport','Nagpur Airport','Nashik Station']
+   }
+  },
+  {id:'kerala',name:'Kerala',capital:'Thiruvananthapuram',
+   events:[
+    {icon:'&#128013;',text:'Onam Snake Boat Race winning bonus! You get 500RS.',amount:500,gain:true},
+    {icon:'&#127796;',text:'Theyyam performance expenses. You pay 80RS.',amount:-80,gain:false},
+    {icon:'&#128024;',text:'Thrissur Pooram elephant procession costs. You pay 100RS.',amount:-100,gain:false},
+    {icon:'&#127881;',text:'Today is your birthday and each player pay you 10RS.',amount:10,gain:true,bday:true},
+    {icon:'&#129371;',text:'Spice trade jackpot from Idukki! You get 1000RS.',amount:1000,gain:true},
+    {icon:'&#127754;',text:'Houseboat tourism bonus! You get 500RS.',amount:500,gain:true}
+   ],
+   colors:{
+    red:['Thiruvananthapuram','Kochi','Kozhikode'],blue:['Thrissur','Kollam','Kannur'],
+    green:['Alappuzha','Palakkad','Malappuram'],pink:['Kottayam','Idukki','Wayanad'],
+    yellow:['Pathanamthitta','Kasaragod','Ernakulam'],orange:['Varkala','Munnar','Thekkady'],
+    brown:['Guruvayur','Periyar','Bekal'],white:['Lakshadweep','Ponnani','Chavakkad'],
+    purple:['Ottapalam','Shoranur','Thalassery'],
+    stations:['Kochi Airport','TVM Airport','Calicut Airport','Thrissur Station']
+   }
+  },
+  {id:'punjab',name:'Punjab',capital:'Chandigarh',
+   events:[
+    {icon:'&#127806;',text:'Baisakhi harvest festival farm bonus! You get 500RS.',amount:500,gain:true},
+    {icon:'&#127930;',text:'Bhangra competition travel expenses. You pay 80RS.',amount:-80,gain:false},
+    {icon:'&#127939;',text:'Kabaddi tournament entry fee. You pay 100RS.',amount:-100,gain:false},
+    {icon:'&#127881;',text:'Today is your birthday and each player pay you 10RS.',amount:10,gain:true,bday:true},
+    {icon:'&#128176;',text:'NRI relative sent money jackpot! You get 1000RS.',amount:1000,gain:true},
+    {icon:'&#127801;',text:'Rose Garden festival bonus! You get 500RS.',amount:500,gain:true}
+   ],
+   colors:{
+    red:['Amritsar','Ludhiana','Chandigarh'],blue:['Jalandhar','Patiala','Bathinda'],
+    green:['Mohali','Hoshiarpur','Gurdaspur'],pink:['Firozpur','Moga','Sangrur'],
+    yellow:['Fazilka','Faridkot','Mansa'],orange:['Muktsar','Nawanshahr','Rupnagar'],
+    brown:['Kapurthala','Fatehgarh Sahib','Tarn Taran'],white:['Barnala','Pathankot','Malerkotla'],
+    purple:['SAS Nagar','Ferozepur','Ajitgarh'],
+    stations:['Amritsar Airport','Chandigarh Airport','Ludhiana Station','Jalandhar Station']
+   }
+  },
+  {id:'madhya_pradesh',name:'Madhya Pradesh',capital:'Bhopal',
+   events:[
+    {icon:'&#128047;',text:'Tiger Safari at Bandhavgarh! You get 500RS bonus.',amount:500,gain:true},
+    {icon:'&#127917;',text:'Lokrang festival expenses. You pay 80RS.',amount:-80,gain:false},
+    {icon:'&#9961;',text:'Mahakumbh pilgrimage travel costs. You pay 100RS.',amount:-100,gain:false},
+    {icon:'&#127881;',text:'Today is your birthday and each player pay you 10RS.',amount:10,gain:true,bday:true},
+    {icon:'&#128176;',text:'Diamond mining jackpot from Panna! You get 1000RS.',amount:1000,gain:true},
+    {icon:'&#127802;',text:'Khajuraho Festival of Dances bonus! You get 500RS.',amount:500,gain:true}
+   ],
+   colors:{
+    red:['Bhopal','Indore','Jabalpur'],blue:['Gwalior','Ujjain','Sagar'],
+    green:['Dewas','Satna','Ratlam'],pink:['Rewa','Murwara','Singrauli'],
+    yellow:['Burhanpur','Khandwa','Chhindwara'],orange:['Pithampur','Sehore','Vidisha'],
+    brown:['Mandla','Balaghat','Dindori'],white:['Shivpuri','Morena','Guna'],
+    purple:['Tikamgarh','Chhatarpur','Panna'],
+    stations:['Bhopal Airport','Indore Airport','Jabalpur Station','Gwalior Station']
+   }
+  },
+  {id:'west_bengal',name:'West Bengal',capital:'Kolkata',
+   events:[
+    {icon:'&#127912;',text:'Durga Puja pandal art prize! You get 500RS.',amount:500,gain:true},
+    {icon:'&#127917;',text:'Rabindra Jayanti program expenses. You pay 80RS.',amount:-80,gain:false},
+    {icon:'&#128032;',text:'Sundarbans boat tour ticket costs. You pay 100RS.',amount:-100,gain:false},
+    {icon:'&#127881;',text:'Today is your birthday and each player pay you 10RS.',amount:10,gain:true,bday:true},
+    {icon:'&#128218;',text:'Kolkata Book Fair prize money! You get 1000RS.',amount:1000,gain:true},
+    {icon:'&#127800;',text:'Poila Baishakh New Year bonus! You get 500RS.',amount:500,gain:true}
+   ],
+   colors:{
+    red:['Kolkata','Howrah','Siliguri'],blue:['Asansol','Durgapur','Bardhaman'],
+    green:['Malda','Baharampur','Kharagpur'],pink:['Haldia','Bankura','Purulia'],
+    yellow:['Cooch Behar','Jalpaiguri','Darjeeling'],orange:['Alipurduar','Kalimpong','Raiganj'],
+    brown:['Krishnanagar','Nabadwip','Santiniketan'],white:['Barasat','Barrackpore','Kalyani'],
+    purple:['Shantipur','Balurghat','Ranaghat'],
+    stations:['Kolkata Airport','Bagdogra Airport','Howrah Station','Sealdah Station']
+   }
+  },
+  {id:'tamil_nadu',name:'Tamil Nadu',capital:'Chennai',
+   events:[
+    {icon:'&#127749;',text:'Pongal festival sugarcane harvest bonus! You get 500RS.',amount:500,gain:true},
+    {icon:'&#128698;',text:'Jallikattu participation expenses. You pay 80RS.',amount:-80,gain:false},
+    {icon:'&#127754;',text:'Marina Beach storm damage! You pay 100RS.',amount:-100,gain:false},
+    {icon:'&#127881;',text:'Today is your birthday and each player pay you 10RS.',amount:10,gain:true,bday:true},
+    {icon:'&#127916;',text:'Kollywood film royalty jackpot! You get 1000RS.',amount:1000,gain:true},
+    {icon:'&#127930;',text:'Chithirai Festival float prize! You get 500RS.',amount:500,gain:true}
+   ],
+   colors:{
+    red:['Chennai','Coimbatore','Madurai'],blue:['Tiruchirappalli','Salem','Erode'],
+    green:['Tirunelveli','Vellore','Thoothukudi'],pink:['Tiruppur','Dindigul','Thanjavur'],
+    yellow:['Ranipet','Sivakasi','Karur'],orange:['Udhagamandalam','Hosur','Nagercoil'],
+    brown:['Kumbakonam','Kancheepuram','Chidambaram'],white:['Rameswaram','Mahabalipuram','Kanyakumari'],
+    purple:['Pollachi','Mettur','Cuddalore'],
+    stations:['Chennai Airport','Coimbatore Airport','Madurai Airport','Tiruchirappalli Airport']
+   }
+  }
+];
+
+// Global state
+var db=null,myId=null,myName='',myGid=null,isHost=false,gs=null;
+var bd=null,cells=[],jTimers={},wrL=[],gL=null,myTurn=false,joiningG=null,selSell=null;
+
+// Firebase helpers
+function R(p){return db.ref(p);}
+function fSet(p,v){return R(p).set(v);}
+function fGet(p){return R(p).once('value');}
+function fUpd(p,v){return R(p).update(v);}
+function fDel(p){return R(p).remove();}
+function fOn(p,cb){R(p).on('value',cb);}
+function fOff(p){try{R(p).off();}catch(e){}}
+
+// Utils
+function uid(){return Math.random().toString(36).substr(2,9)+Date.now().toString(36);}
+function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function esc(s){var r={"&":"&amp;","<":"&lt;",">":"&gt;"};r['"']="&quot;";r["'"]="&#39;";return String(s||"").replace(/[&<>"']/g,function(c){return r[c];});}
+function G(id){return document.getElementById(id);}
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');s.style.display='none';});
+  var el=G(id);
+  if(el){el.style.display='flex';el.classList.add('active');}
+}
+function openM(id){G(id).classList.add('open');}
+function closeM(id){G(id).classList.remove('open');}
+function load(on){if(on){G('loader').classList.add('on');}else{G('loader').classList.remove('on');}}
+
+function toast(title,body,btns,ms){
+  if(ms===undefined)ms=5000;
+  var area=G('notif-area');
+  var n=document.createElement('div');
+  n.className='notif';n.setAttribute('role','alert');
+  n.innerHTML='<div class="notif-title">'+title+'</div><div>'+body+'</div>';
+  if(btns){
+    var row=document.createElement('div');row.className='notif-btns';
+    btns.forEach(function(b){
+      var btn=document.createElement('button');
+      btn.textContent=b.label;btn.className=b.cls||'';
+      btn.onclick=function(){b.fn();n.remove();};
+      row.appendChild(btn);
+    });
+    n.appendChild(row);
+  }
+  area.appendChild(n);
+  if(ms>0&&!btns)setTimeout(function(){n.remove();},ms);
+  return n;
+}
+
+// Board cells
+function makeCells(board){
+  var b=board.colors;
+  return [
+    {id:0, name:'START Go!',    type:'salary',  icon:'&#127937;', price:0,   rent:0},
+    {id:1, name:b.red[0],       type:'property', color:'red',    price:400, rent:40},
+    {id:2, name:b.red[1],       type:'property', color:'red',    price:420, rent:42},
+    {id:3, name:'Community Chest',type:'random', icon:'&#127922;',price:0,  rent:0},
+    {id:4, name:b.red[2],       type:'property', color:'red',    price:440, rent:44},
+    {id:5, name:b.stations[0],  type:'station',  icon:'&#9992;',  price:300, rent:50},
+    {id:6, name:b.blue[0],      type:'property', color:'blue',   price:300, rent:30},
+    {id:7, name:b.blue[1],      type:'property', color:'blue',   price:320, rent:32},
+    {id:8, name:'Income Tax',   type:'tax',      icon:'&#128184;',price:0,  rent:100},
+    {id:9, name:b.blue[2],      type:'property', color:'blue',   price:340, rent:34},
+    {id:10,name:'JAIL Visit',   type:'corner',   icon:'&#128274;',price:0,  rent:0},
+    {id:11,name:b.green[0],     type:'property', color:'green',  price:380, rent:38},
+    {id:12,name:'Public Works 1',type:'public',  icon:'&#127963;',price:250,rent:30},
+    {id:13,name:b.green[1],     type:'property', color:'green',  price:360, rent:36},
+    {id:14,name:b.green[2],     type:'property', color:'green',  price:370, rent:37},
+    {id:15,name:b.stations[1],  type:'station',  icon:'&#128641;',price:300,rent:50},
+    {id:16,name:b.pink[0],      type:'property', color:'pink',   price:350, rent:35},
+    {id:17,name:'Chance',       type:'random',   icon:'&#10067;', price:0,  rent:0},
+    {id:18,name:b.pink[1],      type:'property', color:'pink',   price:340, rent:34},
+    {id:19,name:b.pink[2],      type:'property', color:'pink',   price:360, rent:36},
+    {id:20,name:'FREE Parking', type:'corner',   icon:'&#127359;',price:0,  rent:0},
+    {id:21,name:b.yellow[0],    type:'property', color:'yellow', price:320, rent:32},
+    {id:22,name:b.yellow[1],    type:'property', color:'yellow', price:330, rent:33},
+    {id:23,name:'Community Chest',type:'random', icon:'&#127922;',price:0,  rent:0},
+    {id:24,name:b.yellow[2],    type:'property', color:'yellow', price:340, rent:34},
+    {id:25,name:b.stations[2],  type:'station',  icon:'&#128641;',price:300,rent:50},
+    {id:26,name:b.orange[0],    type:'property', color:'orange', price:280, rent:28},
+    {id:27,name:b.orange[1],    type:'property', color:'orange', price:290, rent:29},
+    {id:28,name:'GO TO JAIL',   type:'corner',   icon:'&#128110;',price:0,  rent:0},
+    {id:29,name:b.orange[2],    type:'property', color:'orange', price:300, rent:30},
+    {id:30,name:b.brown[0],     type:'property', color:'brown',  price:260, rent:26},
+    {id:31,name:'Public Works 2',type:'public',  icon:'&#127959;',price:250,rent:30},
+    {id:32,name:b.brown[1],     type:'property', color:'brown',  price:270, rent:27},
+    {id:33,name:b.brown[2],     type:'property', color:'brown',  price:280, rent:28},
+    {id:34,name:b.stations[3],  type:'station',  icon:'&#9992;',  price:300, rent:50},
+    {id:35,name:b.white[0],     type:'property', color:'white',  price:240, rent:24},
+    {id:36,name:'Chance',       type:'random',   icon:'&#10067;', price:0,  rent:0},
+    {id:37,name:b.purple[0],    type:'property', color:'purple', price:350, rent:35},
+    {id:38,name:'Public Works 3',type:'public',  icon:'&#127795;',price:200,rent:25},
+    {id:39,name:'SALARY +200',  type:'salary',   icon:'&#128176;',price:0,  rent:0},
+    {id:40,name:'Luxury Tax',   type:'tax',      icon:'&#128142;',price:0,  rent:150}
+  ];
+}
+
+// Board cell grid positions (10x10 CSS grid)
+function cellPos(){
+  var p={};
+  var i;
+  // Bottom row left to right: cells 0-9 col 1-9, row 10
+  for(i=0;i<=9;i++){p[i]={col:String(i+1),row:'10'};}
+  // Bottom-right corner: cell 10
+  p[10]={col:'10',row:'10'};
+  // Right col bottom to top: cells 11-19
+  for(i=11;i<=19;i++){p[i]={col:'10',row:String(10-(i-10))};}
+  // Top row right to left: cells 20-28
+  for(i=20;i<=28;i++){p[i]={col:String(10-(i-19)),row:'1'};}
+  // Left col top to bottom: cells 29-36
+  for(i=29;i<=36;i++){p[i]={col:'1',row:String(i-27)};}
+  // Extra cells
+  p[37]={col:'6',row:'10'};p[38]={col:'7',row:'10'};
+  p[39]={col:'8',row:'10'};p[40]={col:'9',row:'10'};
+  return p;
+}
+
+function populateBoards(){
+  var sel=G('inp-board');sel.innerHTML='';
+  BOARDS.forEach(function(b){
+    var o=document.createElement('option');
+    o.value=b.id;o.textContent=b.name+' ('+b.capital+')';
+    sel.appendChild(o);
+  });
+}
+
+// HOME
+G('btn-create').addEventListener('click',function(){
+  populateBoards();
+  G('inp-cname').value='';G('inp-gname').value='';
+  openM('modal-create');
+  setTimeout(function(){G('inp-cname').focus();},60);
+});
+G('btn-join').addEventListener('click',function(){
+  showScreen('screen-lobby');loadLobby();
+});
+G('btn-back-lobby').addEventListener('click',function(){showScreen('screen-home');});
+G('btn-cancel-create').addEventListener('click',function(){closeM('modal-create');});
+G('btn-cancel-join').addEventListener('click',function(){closeM('modal-join');});
+
+// CREATE GAME
+G('btn-do-create').addEventListener('click',async function(){
+  var name=G('inp-cname').value.trim();
+  var gname=G('inp-gname').value.trim();
+  var boardId=G('inp-board').value;
+  if(!name){toast('Warning','Please enter your name.');G('inp-cname').focus();return;}
+  if(!gname){toast('Warning','Please enter a room name.');G('inp-gname').focus();return;}
+  load(true);
+  var board=BOARDS.find(function(b){return b.id===boardId;})||BOARDS[0];
+  myId=uid();myName=name;isHost=true;
+  var gid=uid();myGid=gid;
+  bd=board;cells=makeCells(board);
+  var me={id:myId,name:name,color:PCOLORS[0],money:START_MONEY,position:0,properties:[],turns:0,bankrupt:false};
+  var gdata={
+    id:gid,name:gname,boardId:boardId,boardName:board.name,
+    hostId:myId,status:'waiting',createdAt:Date.now(),
+    players:{},currentTurn:myId,turnIndex:0,playerOrder:[myId],lastUpdated:Date.now()
+  };
+  gdata.players[myId]=me;
+  try{
+    await fSet('games/'+gid,gdata);
+    closeM('modal-create');load(false);SND.play('create');
+    enterWaiting(gid,myId,gdata);
+  }catch(err){
+    load(false);console.error('Create error:',err);
+    toast('Error','Could not create game. Check Firebase Console - enable Realtime Database and set rules to allow read/write.');
+  }
+});
+
+// LOBBY
+async function loadLobby(){
+  var list=G('lobby-list');
+  list.innerHTML='<div class="empty-lobby"><div style="font-size:2rem;margin-bottom:10px">&#8635;</div>Loading games...</div>';
+  try{
+    var snap=await fGet('games');
+    var all=snap.val()||{};
+    var open=Object.values(all).filter(function(g){return g&&g.status==='waiting';});
+    if(!open.length){
+      list.innerHTML='<div class="empty-lobby"><div style="font-size:2rem;margin-bottom:10px">&#127922;</div>No games available right now.<br><span style="font-size:.86rem;display:block;margin-top:6px">Please create one otherwise check back later!</span></div>';
+      return;
+    }
+    list.innerHTML='';
+    open.forEach(function(g){
+      var pc=g.players?Object.keys(g.players).length:0;
+      var hn=g.players&&g.hostId&&g.players[g.hostId]?g.players[g.hostId].name:'?';
+      var card=document.createElement('div');
+      card.className='g-card';card.setAttribute('role','listitem');card.setAttribute('tabindex','0');
+      card.setAttribute('aria-label',g.name+', Board: '+g.boardName+', '+pc+' player(s)');
+      card.innerHTML='<div class="gc-name">'+esc(g.name)+'</div>'
+        +'<div class="gc-host">Host: <strong>'+esc(hn)+'</strong></div>'
+        +'<div class="gc-players">&#128101; '+pc+' player'+(pc!==1?'s':'')+' waiting</div>'
+        +'<div class="gc-board">&#128205; '+esc(g.boardName||'India')+'</div>';
+      card.onclick=function(){openJoinModal(g);};
+      card.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();openJoinModal(g);}};
+      list.appendChild(card);
+    });
+  }catch(err){
+    list.innerHTML='<div class="empty-lobby">Could not load games. Check Firebase connection.</div>';
+    console.error('Lobby error:',err);
+  }
+}
+
+function openJoinModal(g){
+  joiningG=g;
+  G('join-info').textContent='Joining: '+g.name+' ('+g.boardName+')';
+  G('inp-jname').value='';
+  openM('modal-join');
+  setTimeout(function(){G('inp-jname').focus();},60);
+}
+
+// JOIN GAME
+G('btn-do-join').addEventListener('click',async function(){
+  var name=G('inp-jname').value.trim();
+  if(!name){toast('Warning','Please enter your name.');G('inp-jname').focus();return;}
+  if(!joiningG)return;
+  load(true);
+  myId=uid();myName=name;myGid=joiningG.id;isHost=false;
+  bd=BOARDS.find(function(b){return b.id===joiningG.boardId;})||BOARDS[0];
+  cells=makeCells(bd);
+  var reqId=uid();
+  try{
+    await fSet('games/'+joiningG.id+'/joinRequests/'+reqId,{
+      id:reqId,playerId:myId,playerName:name,timestamp:Date.now(),status:'pending'
+    });
+    SND.play('join_req');closeM('modal-join');load(false);
+    var gname=joiningG.name;
+    var waitN=toast('Request Sent','Waiting for host to admit you to '+esc(gname)+'...',null,0);
+    var done=false;
+    var timer=setTimeout(async function(){
+      if(!done){
+        done=true;waitN.remove();
+        toast('No Response','No one responded to your request. Please try again later.',null,6000);
+        try{await fDel('games/'+joiningG.id+'/joinRequests/'+reqId);}catch(e){}
+      }
+    },30000);
+    var poll=setInterval(async function(){
+      if(done){clearInterval(poll);return;}
+      try{
+        var s=await fGet('games/'+joiningG.id+'/joinRequests/'+reqId);
+        var req=s.val();
+        if(!req){clearInterval(poll);return;}
+        if(req.status==='admitted'){
+          done=true;clearInterval(poll);clearTimeout(timer);
+          waitN.remove();SND.play('joined');
+          toast('Welcome!','You have been admitted to '+esc(joiningG.name)+'!',null,4000);
+          var pi=req.playerIndex||1;
+          var me={id:myId,name:name,color:PCOLORS[pi%PCOLORS.length],money:START_MONEY,position:0,properties:[],turns:0,bankrupt:false};
+          await fSet('games/'+joiningG.id+'/players/'+myId,me);
+          await fDel('games/'+joiningG.id+'/joinRequests/'+reqId);
+          var gs2=await fGet('games/'+joiningG.id);
+          enterWaiting(joiningG.id,myId,gs2.val());
+        }else if(req.status==='denied'){
+          done=true;clearInterval(poll);clearTimeout(timer);
+          waitN.remove();
+          toast('Request Denied','Your request has been rejected.',null,5000);
+          try{await fDel('games/'+joiningG.id+'/joinRequests/'+reqId);}catch(e){}
+        }
+      }catch(e){}
+    },1200);
+  }catch(err){
+    load(false);
+    toast('Error','Could not send join request. Check Firebase connection.');
+    console.error('Join error:',err);
+  }
+});
+
+// WAITING ROOM
+function enterWaiting(gid,pid,gdata){
+  showScreen('screen-waiting');
+  G('wr-name').textContent=gdata.name;
+  G('wr-board').textContent=gdata.boardName;
+  G('wr-code').textContent=gid.substr(0,8).toUpperCase();
+  var sb=G('btn-start-game');
+  sb.style.display=isHost?'block':'none';
+  sb.disabled=true;sb.textContent='Need 1 more player...';
+  stopWaiting();
+  fOn('games/'+gid,function(snap){
+    var gd=snap.val();if(!gd)return;
+    gs=gd;updateWaitingUI(gd,pid);
+    if(isHost&&gd.joinRequests){
+      Object.keys(gd.joinRequests).forEach(function(rid){
+        var req=gd.joinRequests[rid];
+        if(req&&req.status==='pending'&&!jTimers[rid])handleJoinReq(gid,rid,req);
+      });
+    }
+    if(gd.status==='playing'&&gd.players&&gd.players[pid]){
+      stopWaiting();
+      bd=BOARDS.find(function(b){return b.id===gd.boardId;})||BOARDS[0];
+      cells=makeCells(bd);
+      enterGame(gid,pid,gd);
+    }
+  });
+  wrL.push(gid);
+}
+
+function stopWaiting(){wrL.forEach(function(g){fOff('games/'+g);});wrL=[];}
+
+function updateWaitingUI(gd,pid){
+  var list=G('wr-players');list.innerHTML='';
+  if(!gd.players)return;
+  var players=Object.values(gd.players).filter(Boolean);
+  players.forEach(function(p){
+    var chip=document.createElement('div');chip.className='p-chip';chip.setAttribute('role','listitem');
+    chip.innerHTML='<div class="p-av" style="background:'+p.color+'" aria-hidden="true">'+p.name[0].toUpperCase()+'</div>'
+      +'<div class="p-chip-name">'+esc(p.name)+(p.id===pid?' (You)':'')+'</div>'
+      +(p.id===gd.hostId?'<span class="host-badge">HOST</span>':'');
+    list.appendChild(chip);
+  });
+  var cnt=players.length;
+  G('wr-status').textContent=cnt<2?'Waiting for at least 1 more player...':cnt+' players ready!';
+  if(isHost){
+    var sb=G('btn-start-game');
+    sb.disabled=cnt<2;
+    sb.textContent=cnt<2?'Need '+(2-cnt)+' more player(s)':'Start Game ('+cnt+' players)';
+  }
+}
+
+function handleJoinReq(gid,rid,req){
+  SND.play('join_req');
+  var n=toast('Join Request','<strong>'+esc(req.playerName)+'</strong> wants to join your room!',[
+    {label:'Admit',cls:'btn-admit',fn:function(){admitP(gid,rid,req);}},
+    {label:'Deny', cls:'btn-deny', fn:function(){denyP(gid,rid);}}
+  ],0);
+  jTimers[rid]=setTimeout(async function(){n.remove();delete jTimers[rid];await denyP(gid,rid);},30000);
+}
+
+async function admitP(gid,rid,req){
+  clearTimeout(jTimers[rid]);delete jTimers[rid];
+  var s=await fGet('games/'+gid+'/players');
+  var pi=s.val()?Object.keys(s.val()).length:1;
+  await fUpd('games/'+gid+'/joinRequests/'+rid,{status:'admitted',playerIndex:pi});
+}
+
+async function denyP(gid,rid){
+  clearTimeout(jTimers[rid]);delete jTimers[rid];
+  try{await fUpd('games/'+gid+'/joinRequests/'+rid,{status:'denied'});}catch(e){}
+}
+
+G('btn-start-game').addEventListener('click',async function(){
+  if(!isHost||!myGid)return;
+  var s=await fGet('games/'+myGid+'/players');
+  var order=Object.keys(s.val()||{});
+  await fUpd('games/'+myGid,{status:'playing',currentTurn:order[0],turnIndex:0,playerOrder:order,lastUpdated:Date.now()});
+});
+
+G('btn-leave-wr').addEventListener('click',async function(){
+  stopWaiting();
+  if(myGid&&myId){
+    try{await fDel('games/'+myGid+'/players/'+myId);}catch(e){}
+    if(isHost){try{await fDel('games/'+myGid);}catch(e){}}
+  }
+  myGid=null;myId=null;isHost=false;
+  showScreen('screen-home');
+});
+
+// GAME
+function enterGame(gid,pid,gdata){
+  showScreen('screen-game');
+  G('side-gname').textContent=gdata.name;
+  G('side-bname').textContent='Board: '+gdata.boardName;
+  renderBoard(gdata);updateGameUI(gdata,pid);renderChat(gdata);
+  if(gL)fOff('games/'+gL);
+  gL=gid;
+  fOn('games/'+gid,function(snap){
+    var gd=snap.val();if(!gd)return;
+    gs=gd;renderBoard(gd);updateGameUI(gd,pid);renderChat(gd);
+    if(gd.status==='ended'&&gd.winnerId){
+      var w=gd.players&&gd.players[gd.winnerId];
+      if(w)showWin(w,gd.winnerId===pid);
+    }
+  });
+}
+
+function renderBoard(gd){
+  var board=G('game-board');board.innerHTML='';
+  var center=document.createElement('div');center.className='b-center';
+  center.style.cssText='grid-column:2/10;grid-row:2/10;';
+  center.innerHTML='<div class="b-flag" aria-hidden="true">&#127470;&#127475;</div><div class="b-title">Indic Monopoly</div><div class="b-sub">India\'s Own Board Game</div>';
+  board.appendChild(center);
+  var pos=cellPos();
+  var props=(gd&&gd.properties)?gd.properties:{};
+  var plys=(gd&&gd.players)?Object.values(gd.players).filter(Boolean):[];
+  cells.forEach(function(cell,idx){
+    var p=pos[idx];if(!p)return;
+    var el=document.createElement('div');
+    el.className='cell'+(cell.type==='corner'?' corner-cell':'')+((cell.type==='property'||cell.type==='station'||cell.type==='public')?' can-click':'');
+    el.style.cssText='grid-column:'+p.col+';grid-row:'+p.row+';';
+    el.setAttribute('role','gridcell');el.setAttribute('tabindex','0');
+    el.setAttribute('aria-label',cell.name+(cell.price?', RS'+cell.price:'')+(cell.rent&&cell.type!=='salary'?', Rent RS'+cell.rent:''));
+    if(cell.type==='property'||cell.type==='station'){
+      var bar=document.createElement('div');bar.className='c-bar';
+      bar.style.background=COLORS[cell.color]||COLORS.station;
+      bar.setAttribute('aria-hidden','true');el.appendChild(bar);
+    }
+    var prop=props[idx];
+    if(prop){
+      var ow=gd.players&&gd.players[prop.ownerId];
+      if(ow){
+        var dot=document.createElement('div');dot.className='o-dot';dot.style.background=ow.color;
+        dot.title='Owned by '+ow.name;el.appendChild(dot);
+      }
+    }
+    if(cell.icon){
+      var ic=document.createElement('div');ic.className='c-icon';ic.setAttribute('aria-hidden','true');
+      ic.innerHTML=cell.icon;el.appendChild(ic);
+    }
+    var nm=document.createElement('div');nm.className='c-name';nm.setAttribute('aria-hidden','true');
+    nm.textContent=cell.name;el.appendChild(nm);
+    if(cell.price>0){
+      var pr=document.createElement('div');pr.className='c-price';pr.setAttribute('aria-hidden','true');
+      pr.textContent='RS'+cell.price;el.appendChild(pr);
+    }
+    var here=plys.filter(function(p2){return p2.position===idx&&!p2.bankrupt;});
+    if(here.length){
+      var tc=document.createElement('div');tc.className='tok-wrap';tc.setAttribute('aria-hidden','true');
+      here.forEach(function(p2){
+        var tok=document.createElement('div');tok.className='tok';tok.style.background=p2.color;
+        tok.textContent=p2.name[0].toUpperCase();tc.appendChild(tok);
+      });
+      el.appendChild(tc);
+    }
+    if(cell.type==='property'||cell.type==='station'||cell.type==='public'){
+      el.onclick=function(){viewProp(idx,gd);};
+      el.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();viewProp(idx,gd);}};
+    }
+    board.appendChild(el);
+  });
+}
+
+function updateGameUI(gd,pid){
+  if(!gd||!gd.players)return;
+  var order=gd.playerOrder||Object.keys(gd.players);
+  var plys=order.map(function(id){return gd.players[id];}).filter(Boolean);
+  var strip=G('pstrip');strip.innerHTML='';
+  plys.forEach(function(p){
+    var row=document.createElement('div');
+    row.className='p-row'+(p.id===gd.currentTurn?' my-turn':'');
+    row.setAttribute('role','listitem');
+    row.setAttribute('aria-label',p.name+': RS'+p.money+(p.bankrupt?' Bankrupt':'')+(p.id===gd.currentTurn?' current turn':''));
+    row.innerHTML='<div class="p-av2" style="background:'+p.color+'" aria-hidden="true">'+p.name[0].toUpperCase()+'</div>'
+      +'<div class="p-name'+(p.bankrupt?' p-out':'')+'">'+esc(p.name)+(p.id===pid?' &#128100;':'')+'</div>'
+      +'<div class="p-money'+(p.bankrupt?' p-out':'')+'">RS'+p.money+'</div>';
+    strip.appendChild(row);
+  });
+  var cur=gd.currentTurn&&gd.players[gd.currentTurn];
+  if(cur){
+    var mine=gd.currentTurn===pid;
+    myTurn=mine;
+    G('turn-bar').innerHTML=mine?'<strong>&#127922; Your Turn! Roll the dice!</strong>':'Turn: <strong>'+esc(cur.name)+'</strong>';
+    var rb=G('btn-roll');rb.disabled=!mine;rb.style.opacity=mine?'1':'0.4';
+  }
+}
+
+// ROLL DICE
+G('btn-roll').addEventListener('click',async function(){
+  if(!myTurn||!myGid||!myId)return;
+  var gd=gs;if(!gd||gd.currentTurn!==myId)return;
+  var player=gd.players[myId];if(!player||player.bankrupt)return;
+  G('btn-roll').disabled=true;myTurn=false;
+  var d1=rnd(1,6),d2=rnd(1,6);
+  SND.play('dice');
+  G('die1').classList.add('spin');G('die2').classList.add('spin');
+  setTimeout(function(){G('die1').classList.remove('spin');G('die2').classList.remove('spin');},600);
+  var DICE=['','&#9856;','&#9857;','&#9858;','&#9859;','&#9860;','&#9861;'];
+  G('die1').innerHTML=DICE[d1];G('die2').innerHTML=DICE[d2];
+  G('dice-result').textContent='Rolled: '+d1+' + '+d2+' = '+(d1+d2);
+  var old=player.position||0;
+  var pos=(old+d1+d2)%41;
+  var money=player.money;
+  if(pos<old){money+=SALARY;SND.play('salary');sysMsg(player.name+' collected salary RS'+SALARY+'!');}
+  if(pos===39){money+=SALARY;SND.play('salary');sysMsg(player.name+' landed on Salary! +RS'+SALARY);}
+  if(pos===GO_JAIL){pos=JAIL;sysMsg(player.name+' went to Jail!');}
+  var cell=cells[pos];
+  G('dice-moved').textContent='-> '+cell.name;
+  await fUpd('games/'+myGid+'/players/'+myId,{position:pos,money:money,turns:(player.turns||0)+1});
+  var freshSnap=await fGet('games/'+myGid);
+  var freshGd=freshSnap.val();if(freshGd)gs=freshGd;
+  var freshMe=Object.assign({},freshGd?freshGd.players[myId]:player,{position:pos,money:money});
+  await landOn(pos,cell,freshGd||gd,freshMe);
+});
+
+async function landOn(pos,cell,gd,player){
+  if(cell.type==='salary'){await nextTurn(gd);}
+  else if(cell.type==='tax'){
+    SND.play('tax');
+    var after=player.money-cell.rent;
+    await fUpd('games/'+myGid+'/players/'+myId,{money:after});
+    showInfo('Tax Collected!',cell.name+' - You paid RS'+cell.rent+' tax!','-RS'+cell.rent,'loss');
+    await waitInfo();
+    if(after<=0){await goBankrupt();}else{await nextTurn(gd);}
+  }else if(cell.type==='random'){await doEvent(gd,player);}
+  else if(cell.type==='station'){SND.play('airport');await doProp(pos,cell,gd,player);}
+  else if(cell.type==='property'||cell.type==='public'){await doProp(pos,cell,gd,player);}
+  else if(cell.type==='corner'){
+    if(pos===JAIL)sysMsg(player.name+' is Just Visiting Jail!');
+    await nextTurn(gd);
+  }else{await nextTurn(gd);}
+}
+
+async function doProp(pos,cell,gd,player){
+  var ps=await fGet('games/'+myGid+'/properties/'+pos);
+  var prop=ps.val();
+  if(!prop){
+    await new Promise(function(resolve){
+      var col=COLORS[cell.color]||COLORS.station||COLORS.public_||'#555';
+      G('prop-cbar').style.background=col;
+      G('mp-h').textContent=cell.name;
+      G('prop-tag').textContent=(cell.type==='station'?'Station':(cell.type==='public'?'Public Property':cell.color+' Property')).toUpperCase();
+      G('prop-stats').innerHTML='<div class="p-stat"><span class="lbl">Price</span><span>RS'+cell.price+'</span></div>'
+        +'<div class="p-stat"><span class="lbl">Base Rent</span><span>RS'+cell.rent+'</span></div>'
+        +'<div class="p-stat"><span class="lbl">Your Cash</span><span>RS'+player.money+'</span></div>';
+      G('prop-owner').innerHTML='<div class="p-owner-msg"><strong>'+esc(cell.name)+'</strong><br>Current price RS'+cell.price+', Rent RS'+cell.rent+'.<br>Do you want to buy?</div>';
+      var acts=G('prop-acts');acts.innerHTML='';
+      var canBuy=player.money>=cell.price;
+      var skip=document.createElement('button');skip.className='btn-s';skip.textContent='Skip';
+      skip.onclick=function(){closeM('modal-prop');resolve();};
+      var buy=document.createElement('button');buy.className='btn-p';
+      buy.textContent=canBuy?'Buy RS'+cell.price:"Can't Afford";buy.disabled=!canBuy;
+      buy.onclick=async function(){
+        closeM('modal-prop');SND.play('prop');
+        await fUpd('games/'+myGid+'/players/'+myId,{money:player.money-cell.price});
+        await fSet('games/'+myGid+'/properties/'+pos,{pos:pos,ownerId:myId,ownerName:myName,price:cell.price,currentRent:cell.rent,boughtAt:Date.now()});
+        var op=(await fGet('games/'+myGid+'/players/'+myId+'/properties')).val()||[];
+        await fSet('games/'+myGid+'/players/'+myId+'/properties',[].concat(op,[pos]));
+        sysMsg(myName+' bought '+cell.name+' for RS'+cell.price+'!');
+        resolve();
+      };
+      acts.appendChild(skip);acts.appendChild(buy);openM('modal-prop');
+    });
+    var fg=(await fGet('games/'+myGid)).val();if(fg)gs=fg;
+    await nextTurn(gs||gd);
+  }else if(prop.ownerId===myId){
+    showInfo('Your Property!',cell.name+' is yours! Looking great!','','');
+    await waitInfo();await nextTurn(gd);
+  }else{
+    var os=await fGet('games/'+myGid+'/players/'+prop.ownerId);
+    var owner=os.val();if(!owner||owner.bankrupt){await nextTurn(gd);return;}
+    var rent=prop.currentRent||cell.rent;
+    if(cell.type==='property'){
+      var cc=cells.filter(function(c){return c.type==='property'&&c.color===cell.color;});
+      var ps2=(await fGet('games/'+myGid+'/properties')).val()||{};
+      var allOwned=cc.every(function(c){return ps2[c.id]&&ps2[c.id].ownerId===prop.ownerId;});
+      if(allOwned)rent=Math.floor(rent*1.2);
+    }
+    if(cell.type==='station'){SND.play('railway');}else{SND.play('pay_r');}
+    if(player.money<rent){
+      await cantPay(player,rent,prop.ownerId,owner,gd);
+    }else{
+      await fUpd('games/'+myGid+'/players/'+myId,{money:player.money-rent});
+      await fUpd('games/'+myGid+'/players/'+prop.ownerId,{money:owner.money+rent});
+      await fUpd('games/'+myGid+'/properties/'+pos,{currentRent:Math.floor(rent*1.05)});
+      showInfo('Beautiful Property!','Wow this property is very beautiful! This property is owned by <strong>'+esc(owner.name)+'</strong>. You pay RS'+rent+' to this user.','-RS'+rent,'loss');
+      await waitInfo();await nextTurn(gd);
+    }
+  }
+}
+
+async function doEvent(gd,player){
+  var ev=bd.events[Math.floor(Math.random()*bd.events.length)];
+  var amount=ev.amount;
+  if(ev.bday){
+    var as=await fGet('games/'+myGid+'/players');
+    var all=as.val()||{};var total=0;
+    var pids=Object.keys(all);
+    for(var i=0;i<pids.length;i++){
+      var pid=pids[i];var p=all[pid];
+      if(pid!==myId&&!p.bankrupt&&p.money>=10){
+        total+=10;await fUpd('games/'+myGid+'/players/'+pid,{money:p.money-10});
+      }
+    }
+    amount=total;
+    await fUpd('games/'+myGid+'/players/'+myId,{money:player.money+total});
+  }else{
+    await fUpd('games/'+myGid+'/players/'+myId,{money:player.money+amount});
+  }
+  if(ev.gain||amount>0)SND.play('bonus');
+  var da=amount>=0?'+RS'+amount:'-RS'+Math.abs(amount);
+  showInfo(ev.icon+' Random Event!',ev.text,da,amount>=0?'gain':'loss');
+  sysMsg(player.name+': '+ev.text);
+  await waitInfo();
+  if(player.money+amount<=0){await goBankrupt();}else{await nextTurn(gd);}
+}
+
+async function cantPay(player,rentDue,ownerId,owner,gd){
+  var mps=(await fGet('games/'+myGid+'/players/'+myId+'/properties')).val()||[];
+  var allPs=(await fGet('games/'+myGid+'/properties')).val()||{};
+  if(!mps.length){
+    SND.play('losing');
+    showInfo('Bankrupt!','You don\'t have enough Money to pay rent RS'+rentDue+' and have no properties to sell. You are eliminated!','','loss');
+    await waitInfo();await goBankrupt();return;
+  }
+  return new Promise(function(resolve){
+    G('sell-reason').textContent='You don\'t have enough Money to pay rent RS'+rentDue+'. You have RS'+player.money+'. Please sell any property!';
+    var sl=G('sell-list');sl.innerHTML='';selSell=null;G('btn-sell-ok').disabled=true;
+    mps.forEach(function(pp){
+      var cd=cells[pp];if(!cd)return;
+      var pd=allPs[pp];
+      var sp=Math.floor(((pd&&pd.price)||cd.price)*0.6);
+      var col=COLORS[cd.color]||COLORS.station||'#888';
+      var item=document.createElement('div');
+      item.className='sell-item';item.setAttribute('role','listitem');item.setAttribute('tabindex','0');
+      item.setAttribute('aria-label',cd.name+', Sell for RS'+sp);
+      item.innerHTML='<div class="si-dot" style="background:'+col+'" aria-hidden="true"></div>'
+        +'<div style="flex:1"><div class="si-name">'+esc(cd.name)+'</div>'
+        +'<div class="si-rent">Rent: RS'+((pd&&pd.currentRent)||cd.rent)+'</div></div>'
+        +'<div class="si-val">Sell: RS'+sp+'</div>';
+      item.onclick=function(){
+        document.querySelectorAll('.sell-item').forEach(function(i){i.classList.remove('sel');});
+        item.classList.add('sel');selSell=pp;G('btn-sell-ok').disabled=false;
+      };
+      item.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();item.click();}};
+      sl.appendChild(item);
+    });
+    openM('modal-sell');
+    G('btn-sell-ok').onclick=async function(){
+      if(selSell===null)return;
+      var pp=selSell,cd=cells[pp],pd=allPs[pp];
+      var sp=Math.floor(((pd&&pd.price)||cd.price)*0.6);
+      SND.play('pay_r');closeM('modal-sell');
+      await fDel('games/'+myGid+'/properties/'+pp);
+      var np=mps.filter(function(x){return x!==pp;});
+      await fSet('games/'+myGid+'/players/'+myId+'/properties',np);
+      var nm=player.money+sp;
+      await fUpd('games/'+myGid+'/players/'+myId,{money:nm});
+      sysMsg(player.name+' sold '+cd.name+' for RS'+sp);
+      if(nm>=rentDue){
+        await fUpd('games/'+myGid+'/players/'+myId,{money:nm-rentDue});
+        await fUpd('games/'+myGid+'/players/'+ownerId,{money:owner.money+rentDue});
+        var fg=(await fGet('games/'+myGid)).val();if(fg)gs=fg;
+        await nextTurn(gs||gd);
+      }else{
+        var fg2=(await fGet('games/'+myGid)).val();if(fg2)gs=fg2;
+        await cantPay(Object.assign({},player,{money:nm,properties:np}),rentDue,ownerId,owner,fg2||gd);
+      }
+      resolve();
+    };
+    G('btn-sell-cancel').onclick=async function(){
+      closeM('modal-sell');SND.play('losing');await goBankrupt();resolve();
+    };
+  });
+}
+
+async function goBankrupt(){
+  SND.play('losing');
+  await fUpd('games/'+myGid+'/players/'+myId,{bankrupt:true,money:0});
+  sysMsg(myName+' is bankrupt and eliminated!');
+  await checkWin();
+}
+
+async function checkWin(){
+  var s=await fGet('games/'+myGid+'/players');
+  var alive=Object.values(s.val()||{}).filter(function(p){return !p.bankrupt;});
+  if(alive.length===1){await fUpd('games/'+myGid,{status:'ended',winnerId:alive[0].id});}
+}
+
+async function nextTurn(gd){
+  if(!gd||!gd.playerOrder)return;
+  var alive=gd.playerOrder.filter(function(id){return gd.players&&gd.players[id]&&!gd.players[id].bankrupt;});
+  if(!alive.length)return;
+  var cur=alive.indexOf(gd.currentTurn);
+  var next=alive[(cur+1)%alive.length];
+  await fUpd('games/'+myGid,{currentTurn:next,turnIndex:(cur+1)%alive.length,lastUpdated:Date.now()});
+}
+
+// INFO MODAL
+function showInfo(title,desc,amount,type){
+  var parts=title.split(' ');
+  G('ev-icon').innerHTML=parts[0];
+  G('mi-h').textContent=parts.slice(1).join(' ');
+  G('ev-desc').innerHTML=desc;
+  G('ev-amt').textContent=amount;
+  G('ev-amt').className='ev-amt '+(type||'');
+  openM('modal-info');
+}
+function waitInfo(){
+  return new Promise(function(resolve){
+    var btn=G('btn-info-ok');
+    var h=function(){btn.removeEventListener('click',h);closeM('modal-info');resolve();};
+    btn.addEventListener('click',h);
+  });
+}
+
+function viewProp(pos,gd){
+  var cell=cells[pos];if(!cell)return;
+  var prop=gd&&gd.properties&&gd.properties[pos];
+  var col=COLORS[cell.color]||COLORS.station||'#555';
+  G('prop-cbar').style.background=col;
+  G('mp-h').textContent=cell.name;
+  G('prop-tag').textContent=(cell.type==='station'?'Station':(cell.type==='public'?'Public Property':cell.color+' Property')).toUpperCase();
+  G('prop-stats').innerHTML='<div class="p-stat"><span class="lbl">Price</span><span>RS'+cell.price+'</span></div>'
+    +'<div class="p-stat"><span class="lbl">Rent</span><span>RS'+(prop?prop.currentRent:cell.rent)+'</span></div>';
+  if(prop){
+    var ow=gd.players&&gd.players[prop.ownerId];
+    G('prop-owner').innerHTML='<div class="p-owner-msg">Owned by <span class="oname">'+esc(ow?ow.name:prop.ownerName)+'</span>. Current rent: RS'+(prop.currentRent||cell.rent)+'</div>';
+  }else{
+    G('prop-owner').innerHTML='<div class="p-owner-msg">This property is available to buy!</div>';
+  }
+  var acts=G('prop-acts');acts.innerHTML='';
+  var cb=document.createElement('button');cb.className='btn-p';cb.textContent='Close';
+  cb.onclick=function(){closeM('modal-prop');};acts.appendChild(cb);
+  openM('modal-prop');
+}
+
+// ACTION BUTTONS
+G('btn-cash').addEventListener('click',function(){
+  if(!gs||!myId)return;
+  var p=gs.players&&gs.players[myId];
+  if(p)showInfo('Your Cash',esc(p.name)+', you currently have <strong>RS'+p.money+'</strong> in your account.','RS'+p.money,'gain');
+});
+G('btn-myprops').addEventListener('click',function(){
+  if(!gs||!myId)return;
+  var p=gs.players&&gs.players[myId];
+  showVProps('My Properties',p?p.properties||[]:[]);
+});
+G('btn-allprops').addEventListener('click',function(){
+  if(!gs)return;
+  var all=Object.keys(gs.properties||{}).map(Number);
+  if(!all.length){showInfo('Properties','No properties have been sold yet.','','');return;}
+  showVProps('All Known Properties',all);
+});
+G('btn-others').addEventListener('click',function(){
+  if(!gs||!myId)return;
+  var others=Object.keys(gs.properties||{}).map(Number).filter(function(pp){
+    var pr=gs.properties[pp];return pr&&pr.ownerId!==myId;
+  });
+  if(!others.length){showInfo('Others','Other players own no properties yet.','','');return;}
+  showVProps('Others Properties',others);
+});
+
+function showVProps(title,positions){
+  G('mvp-h').textContent=title;
+  var c=G('vprops-content');c.innerHTML='';
+  if(!positions||!positions.length){
+    c.style.display='block';
+    c.innerHTML='<p style="color:rgba(255,255,255,.38)">No properties to display. All properties have been sold out or none available.</p>';
+  }else{
+    c.style.display='grid';
+    var props=(gs&&gs.properties)?gs.properties:{};
+    positions.forEach(function(pp){
+      var cd=cells[pp];if(!cd)return;
+      var pd=props[pp];
+      var col=COLORS[cd.color]||COLORS.station||'#888';
+      var ow=pd&&gs.players&&gs.players[pd.ownerId];
+      var item=document.createElement('div');
+      item.className='vp-item';item.style.borderLeftColor=col;
+      item.innerHTML='<div class="vp-name">'+esc(cd.name)+'</div>'
+        +'<div class="vp-price">RS'+cd.price+(pd?' - '+esc(ow?ow.name:pd.ownerName):'  - Available')+'</div>'
+        +'<div class="vp-rent">Rent: RS'+(pd?pd.currentRent:cd.rent)+'</div>';
+      c.appendChild(item);
+    });
+  }
+  openM('modal-vprops');
+}
+G('btn-close-vprops').addEventListener('click',function(){closeM('modal-vprops');});
+G('btn-leave-game').addEventListener('click',async function(){
+  if(!confirm('Are you sure you want to leave the game?'))return;
+  if(gL){fOff('games/'+gL);gL=null;}
+  if(myGid&&myId){try{await fUpd('games/'+myGid+'/players/'+myId,{bankrupt:true});}catch(e){}}
+  myGid=null;myId=null;isHost=false;gs=null;
+  showScreen('screen-home');
+});
+
+// CHAT
+function sysMsg(msg){
+  if(!myGid)return;
+  fSet('games/'+myGid+'/chat/s'+uid(),{sender:'',text:msg,sys:true,ts:Date.now()});
+}
+G('btn-chat-send').addEventListener('click',sendChat);
+G('chat-inp').addEventListener('keydown',function(e){if(e.key==='Enter')sendChat();});
+function sendChat(){
+  var inp=G('chat-inp'),txt=inp.value.trim();
+  if(!txt||!myGid)return;
+  inp.value='';
+  fSet('games/'+myGid+'/chat/m'+uid(),{sender:myName,text:txt,sys:false,ts:Date.now(),pid:myId});
+}
+function renderChat(gd){
+  if(!gd||!gd.chat)return;
+  var box=G('chat-box');
+  var msgs=Object.values(gd.chat).sort(function(a,b){return a.ts-b.ts;});
+  var atBot=box.scrollHeight-box.scrollTop<=box.clientHeight+60;
+  box.innerHTML='';
+  msgs.forEach(function(m){
+    var d=document.createElement('div');
+    d.className='chat-msg'+(m.sys?' sys-msg':'');
+    if(m.sys){d.textContent=m.text;}
+    else{
+      var p=gs&&gs.players&&gs.players[m.pid];
+      var col=p?p.color:'#888';
+      d.innerHTML='<div class="chat-sender" style="color:'+col+'">'+esc(m.sender)+'</div>'+esc(m.text);
+    }
+    box.appendChild(d);
+  });
+  if(atBot)box.scrollTop=box.scrollHeight;
+}
+
+// WIN
+function showWin(winner,isMe){
+  document.querySelectorAll('.modal-bg.open').forEach(function(m){m.classList.remove('open');});
+  G('mw-h').textContent=isMe?'You Won!':winner.name+' Won!';
+  G('win-desc').textContent=isMe?'Congratulations! You are the Indic Monopoly Champion!':'Congratulations to '+winner.name+'!';
+  openM('modal-win');
+  if(isMe){SND.play('win');doConfetti();}
+}
+G('btn-win-home').addEventListener('click',function(){
+  closeM('modal-win');G('confetti-wrap').innerHTML='';
+  if(gL){fOff('games/'+gL);gL=null;}
+  myGid=null;myId=null;isHost=false;gs=null;
+  showScreen('screen-home');
+});
+function doConfetti(){
+  var w=G('confetti-wrap');w.innerHTML='';
+  var cols=['#FF6B00','#C9971A','#2E7D32','#1565C0','#AD1457','#F9A825'];
+  for(var i=0;i<80;i++){
+    var p=document.createElement('div');p.className='cfp';
+    p.style.cssText='left:'+Math.random()*100+'%;background:'+cols[rnd(0,cols.length-1)]
+      +';width:'+rnd(6,14)+'px;height:'+rnd(6,14)+'px;border-radius:'+(Math.random()>.5?'50%':'2px')
+      +';animation-duration:'+rnd(2,5)+'s;animation-delay:'+Math.random()*2+'s;top:-10px;';
+    w.appendChild(p);
+  }
+  setTimeout(function(){w.innerHTML='';},7000);
+}
+
+// ESC key
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){
+    var m=document.querySelector('.modal-bg.open');
+    if(m&&m.id!=='modal-prop'&&m.id!=='modal-info'&&m.id!=='modal-sell')m.classList.remove('open');
+  }
+});
+
+// BOOT
+window.addEventListener('DOMContentLoaded',function(){
+  console.log('Indic Monopoly starting...');
+  try{
+    if(!firebase.apps.length)firebase.initializeApp(FB);
+    db=firebase.database();
+    console.log('Firebase connected OK!');
+  }catch(err){
+    console.error('Firebase init failed:',err);
+    toast('Firebase Error','Could not connect to Firebase. Open browser console (F12) to see the exact error. Make sure Realtime Database is enabled.',null,0);
+  }
+  showScreen('screen-home');
+  console.log('Home screen shown. Game ready!');
+});
+
+</script>
+</body>
+</html>
